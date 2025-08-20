@@ -238,7 +238,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const keyword = document.getElementById('structure-keyword-input')?.value;
                     const articleText = document.getElementById('structure-text-input')?.value;
                     if (!keyword || !articleText) return alert('Introduce la palabra clave y el texto.');
-                    payload = { keyword, articleText };
+                    payload = { keyword, articleText, projectId: appState.currentProjectId };
                 } else if (moduleKey === 'zombieUrls') {
                     const currentProject = appState.projects.find(p => p.id === appState.currentProjectId);
                     if (!currentProject) return alert("Error: No hay un proyecto seleccionado.");

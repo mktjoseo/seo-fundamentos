@@ -3,6 +3,6 @@
   "version": "1.0.0",
   "dependencies": {
     "@supabase/supabase-js": "^2.0.0",
-    "linkedom": "^0.16.8"
+    "jsdom": "^22.0.0"
   }
 }

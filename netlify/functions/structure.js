@@ -1,8 +1,7 @@
-// netlify/functions/structure.js (VERSIÓN SIMPLIFICADA)
+// netlify/functions/structure.js (VERSIÓN FINAL Y COMPLETA)
 
 const { createClient } = require('@supabase/supabase-js');
 
-// Las claves ahora se leen directamente del entorno de Netlify
 const USER_SERPER_API_KEY = process.env.SERPER_API_KEY;
 const USER_GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
@@ -15,19 +14,22 @@ exports.handler = async function(event, context) {
   }
 
   try {
-    // Verificamos que el usuario esté autenticado para evitar abuso
     const { user } = context.clientContext;
     if (!user) throw new Error('Debes estar autenticado para usar esta herramienta.');
     if (!USER_SERPER_API_KEY || !USER_GEMINI_API_KEY) throw new Error('Las claves de Serper y Gemini deben estar configuradas en el servidor.');
 
-    const { keyword, articleText } = JSON.parse(event.body);
+    // Recibimos el projectId desde el frontend
+    const { keyword, articleText, projectId } = JSON.parse(event.body);
     if (!keyword || !articleText) throw new Error('La palabra clave y el texto del artículo son requeridos.');
+    if (!projectId) throw new Error('No se ha proporcionado un ID de proyecto.');
 
+    // --- Lógica del Análisis ---
     const serperResponse = await fetch('https://google.serper.dev/search', {
       method: 'POST',
       headers: { 'X-API-KEY': USER_SERPER_API_KEY, 'Content-Type': 'application/json' },
       body: JSON.stringify({ q: keyword })
     });
+
     if (!serperResponse.ok) throw new Error('Error al llamar a la API de Serper.');
     const serperData = await serperResponse.json();
     const searchContext = serperData.organic?.slice(0, 5).map(r => `Título: ${r.title}\nDescripción: ${r.snippet}`).join('\n---\n');
@@ -40,10 +42,28 @@ exports.handler = async function(event, context) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
     });
+    
     if (!geminiResponse.ok) throw new Error('Error al llamar a la API de Gemini.');
     const geminiData = await geminiResponse.json();
     const jsonResponseText = geminiData.candidates[0].content.parts[0].text.replace(/```json|```/g, '').trim();
     const analysisResult = JSON.parse(jsonResponseText);
+    
+    // --- NUEVO: Lógica para Guardar el Resultado ---
+    const supabaseAdmin = createClient(
+      process.env.SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_KEY
+    );
+
+    const { error: insertError } = await supabaseAdmin.from('analysis_results').insert({
+      project_id: projectId,
+      module_key: 'structure',
+      results_data: analysisResult
+    });
+
+    if (insertError) {
+      console.error('Error al guardar el resultado en Supabase:', insertError);
+    }
+    // --- FIN DE LA LÓGICA DE GUARDADO ---
 
     return {
       statusCode: 200,
