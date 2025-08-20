@@ -1,6 +1,10 @@
-// netlify/functions/structure.js
+// netlify/functions/structure.js (VERSIÓN SIMPLIFICADA)
 
 const { createClient } = require('@supabase/supabase-js');
+
+// Las claves ahora se leen directamente del entorno de Netlify
+const USER_SERPER_API_KEY = process.env.SERPER_API_KEY;
+const USER_GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
 exports.handler = async function(event, context) {
   if (event.httpMethod === 'OPTIONS') {
@@ -11,31 +15,10 @@ exports.handler = async function(event, context) {
   }
 
   try {
-    // ---- LÓGICA DE AUTENTICACIÓN ----
-    const authHeader = event.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      throw new Error('Se requiere un token de autenticación válido.');
-    }
-    const token = authHeader.split(' ')[1];
-
-    const supabase = createClient(
-      process.env.SUPABASE_URL,
-      process.env.SUPABASE_ANON_KEY,
-      { global: { headers: { Authorization: `Bearer ${token}` } } }
-    );
-
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) throw new Error('Autenticación fallida: no se pudo verificar al usuario.');
-    
-    const { data: profile, error: profileError } = await supabase.from('profiles').select('serper_api_key, gemini_api_key').single();
-    if (profileError) throw new Error('No se pudo encontrar el perfil del usuario.');
-    if (!profile.serper_api_key || !profile.gemini_api_key) {
-        throw new Error('El usuario debe configurar sus claves de Serper y Gemini.');
-    }
-    
-    const USER_SERPER_API_KEY = profile.serper_api_key;
-    const USER_GEMINI_API_KEY = profile.gemini_api_key;
-    // ---- FIN DE LA LÓGICA ----
+    // Verificamos que el usuario esté autenticado para evitar abuso
+    const { user } = context.clientContext;
+    if (!user) throw new Error('Debes estar autenticado para usar esta herramienta.');
+    if (!USER_SERPER_API_KEY || !USER_GEMINI_API_KEY) throw new Error('Las claves de Serper y Gemini deben estar configuradas en el servidor.');
 
     const { keyword, articleText } = JSON.parse(event.body);
     if (!keyword || !articleText) throw new Error('La palabra clave y el texto del artículo son requeridos.');
@@ -70,7 +53,7 @@ exports.handler = async function(event, context) {
 
   } catch (err) {
     return {
-      statusCode: 401,
+      statusCode: 400,
       headers: { 'Access-Control-Allow-Origin': '*' },
       body: JSON.stringify({ error: err.message }),
     };

@@ -1,6 +1,9 @@
-// netlify/functions/zombieUrls.js (CORREGIDO)
+// netlify/functions/zombieUrls.js (VERSIÓN SIMPLIFICADA)
 
 const { createClient } = require('@supabase/supabase-js');
+
+// La clave ahora se lee directamente del entorno de Netlify
+const USER_SERPER_API_KEY = process.env.SERPER_API_KEY;
 
 const SITEMAP_URL_REGEX = /<loc>(.*?)<\/loc>/g;
 
@@ -13,33 +16,10 @@ exports.handler = async function(event, context) {
   }
 
   try {
-    // ---- LÓGICA DE AUTENTICACIÓN CORREGIDA ----
-    // 1. Obtenemos el token (la "pulsera") que nos envía el frontend
-    const authHeader = event.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      throw new Error('Se requiere un token de autenticación válido.');
-    }
-    const token = authHeader.split(' ')[1];
-
-    // 2. Creamos un cliente de Supabase que actúa en nombre del usuario
-    const supabase = createClient(
-      process.env.SUPABASE_URL,
-      process.env.SUPABASE_ANON_KEY,
-      { global: { headers: { Authorization: `Bearer ${token}` } } }
-    );
-    
-    // 3. Verificamos la validez del token obteniendo los datos del usuario.
-    // Si el token es inválido, esta línea fallará y nos protegerá.
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) throw new Error('Autenticación fallida: no se pudo verificar al usuario.');
-    
-    // 4. Obtenemos las claves del perfil del usuario
-    const { data: profile, error: profileError } = await supabase.from('profiles').select('serper_api_key').single();
-    if (profileError) throw new Error('No se pudo encontrar el perfil del usuario.');
-    if (!profile.serper_api_key) throw new Error('El usuario no ha configurado su Serper API Key.');
-    
-    const USER_SERPER_API_KEY = profile.serper_api_key;
-    // ---- FIN DE LA LÓGICA CORREGIDA ----
+    // Verificamos que el usuario esté autenticado para evitar abuso
+    const { user } = context.clientContext;
+    if (!user) throw new Error('Debes estar autenticado para usar esta herramienta.');
+    if (!USER_SERPER_API_KEY) throw new Error('La Serper API Key no está configurada en el servidor.');
 
     const { domain } = JSON.parse(event.body);
     if (!domain) throw new Error('El dominio es requerido.');
@@ -55,7 +35,10 @@ exports.handler = async function(event, context) {
       const serperQuery = `site:${url}`;
       const response = await fetch('https://google.serper.dev/search', {
         method: 'POST',
-        headers: { 'X-API-KEY': USER_SERPER_API_KEY, 'Content-Type': 'application/json' },
+        headers: {
+          'X-API-KEY': USER_SERPER_API_KEY,
+          'Content-Type': 'application/json'
+        },
         body: JSON.stringify({ q: serperQuery })
       });
       const results = await response.json();
@@ -76,7 +59,7 @@ exports.handler = async function(event, context) {
 
   } catch (err) {
     return {
-      statusCode: 401, // Cambiamos a 401 para errores de autenticación
+      statusCode: 400,
       headers: { 'Access-Control-Allow-Origin': '*' },
       body: JSON.stringify({ error: err.message }),
     };

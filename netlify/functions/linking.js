@@ -1,7 +1,10 @@
-// netlify/functions/linking.js (CORREGIDO)
+// netlify/functions/linking.js (NUEVA VERSIÓN SIMPLIFICADA)
 
 const { createClient } = require('@supabase/supabase-js');
-const { DOMParser } = require('linkedom');
+const { JSDOM } = require('jsdom');
+
+// Las claves ahora se leen directamente del entorno de Netlify
+const USER_SCRAPER_API_KEY = process.env.SCRAPER_API_KEY;
 
 exports.handler = async function(event, context) {
   if (event.httpMethod === 'OPTIONS') {
@@ -12,35 +15,23 @@ exports.handler = async function(event, context) {
   }
 
   try {
-    // ---- LÓGICA DE AUTENTICACIÓN CORREGIDA ----
-    const authHeader = event.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      throw new Error('Se requiere un token de autenticación válido.');
+    // Verificamos que el usuario esté autenticado para evitar abuso
+    const { user } = context.clientContext;
+    if (!user) {
+      throw new Error('Debes estar autenticado para usar esta herramienta.');
     }
-    const token = authHeader.split(' ')[1];
+    // NOTA: Toda la lógica de buscar el perfil y la clave del usuario ha sido eliminada.
 
-    const supabase = createClient(
-      process.env.SUPABASE_URL,
-      process.env.SUPABASE_ANON_KEY,
-      { global: { headers: { Authorization: `Bearer ${token}` } } }
-    );
-
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) throw new Error('Autenticación fallida: no se pudo verificar al usuario.');
+    if (!USER_SCRAPER_API_KEY) {
+      throw new Error('La ScraperAPI Key no está configurada en el servidor.');
+    }
     
-    const { data: profile, error: profileError } = await supabase.from('profiles').select('scraper_api_key').single();
-    if (profileError) throw new Error('No se pudo encontrar el perfil del usuario.');
-    if (!profile.scraper_api_key) throw new Error('El usuario no ha configurado su ScraperAPI Key.');
-    
-    const USER_SCRAPER_API_KEY = profile.scraper_api_key;
-    // ---- FIN DE LA LÓGICA CORREGIDA ----
-
     const { startUrl, keyUrls } = JSON.parse(event.body);
     if (!startUrl || !keyUrls || !keyUrls.length) {
       throw new Error('La URL de inicio y la lista de URLs clave son requeridas.');
     }
 
-    // --- Lógica del Crawler ---
+    // El resto de la lógica del crawler permanece exactamente igual...
     const queue = [{ url: startUrl, depth: 0 }];
     const visited = new Set([startUrl]);
     const results = new Map();
@@ -61,29 +52,18 @@ exports.handler = async function(event, context) {
       if (normalizedKeyUrls.size === 0) break;
 
       const scraperUrl = `http://api.scraperapi.com?api_key=${USER_SCRAPER_API_KEY}&url=${encodeURIComponent(url)}`;
-
-      // --- MICRÓFONOS DE DEPURACIÓN ---
-      console.log(`[DEBUG] Intentando scrapear: ${url}`);
       const response = await fetch(scraperUrl);
 
-      // Añadimos un log para ver la respuesta de ScraperAPI
-      console.log(`[DEBUG] Respuesta de ScraperAPI para ${url}: Status ${response.status}`);
-
       if (!response.ok) {
-        // Si falla, lo registramos y nos saltamos esta página
-        console.error(`[ERROR] Falló el scrapeo de ${url} con status ${response.status}. Saltando a la siguiente URL.`);
+        console.error(`[ERROR] Falló el scrapeo de ${url} con status ${response.status}.`);
         continue; 
       }
-      // --- FIN DE LOS MICRÓFONOS ---
-
+      
       const html = await response.text();
-
-      const { document } = new DOMParser().parseFromString(html, "text/html");
-      if (!document) continue;
+      const dom = new JSDOM(html);
+      const document = dom.window.document;
 
       const links = document.querySelectorAll('a');
-      console.log(`[DEBUG] Se encontraron ${links.length} enlaces en ${url}.`);
-
       for (const link of links) {
         const href = link.getAttribute('href');
         if (href) {
@@ -116,7 +96,7 @@ exports.handler = async function(event, context) {
 
   } catch (err) {
     return {
-      statusCode: 401, // Error de autenticación
+      statusCode: 400,
       headers: { 'Access-Control-Allow-Origin': '*' },
       body: JSON.stringify({ error: err.message }),
     };
