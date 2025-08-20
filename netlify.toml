@@ -1,4 +1,13 @@
+# netlify.toml usando la configuración específica por función
+
 [functions]
   directory = "netlify/functions"
   node_bundler = "esbuild"
+
+# Límite de tiempo específico para la función linking
+[functions.linking]
+  timeout = 25
+
+# Límite de tiempo específico para la función zombieUrls
+[functions.zombieUrls]
   timeout = 25
