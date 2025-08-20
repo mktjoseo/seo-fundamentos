@@ -2,7 +2,7 @@
 
 [functions]
   directory = "netlify/functions"
-  node_bundler = "esbuild"
+  node_bundler = "zisi"
 
 # Tiempos de ejecución extendidos para cada función
 [functions.linking]
