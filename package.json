@@ -1,0 +1,8 @@
+{
+  "name": "fundamentos-seo-functions",
+  "version": "1.0.0",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.0.0",
+    "linkedom": "^0.16.8"
+  }
+}

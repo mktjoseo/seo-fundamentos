@@ -1,0 +1,129 @@
+:root {
+  --background: #f7f9f3;
+  --foreground: #000000;
+  --card: #ffffff;
+  --card-foreground: #000000;
+  --popover: #ffffff;
+  --popover-foreground: #000000;
+  --primary: #4f46e5;
+  --primary-foreground: #ffffff;
+  --secondary: #14b8a6;
+  --secondary-foreground: #ffffff;
+  --muted: #f0f0f0;
+  --muted-foreground: #333333;
+  --accent: #f59e0b;
+  --accent-foreground: #000000;
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+  --border: #e0e0e0;
+  --input: #737373;
+  --ring: #a5b4fc;
+  --radius: 1rem;
+  --font-sans: 'DM Sans', sans-serif;
+  --font-mono: 'Space Mono', monospace;
+}
+
+.dark {
+  --background: #000000;
+  --foreground: #ffffff;
+  --card: #1a212b;
+  --card-foreground: #ffffff;
+  --popover: #1a212b;
+  --popover-foreground: #ffffff;
+  --primary: #818cf8;
+  --primary-foreground: #000000;
+  --secondary: #2dd4bf;
+  --secondary-foreground: #000000;
+  --muted: #333333;
+  --muted-foreground: #cccccc;
+  --accent: #fcd34d;
+  --accent-foreground: #000000;
+  --destructive: #f87171;
+  --destructive-foreground: #000000;
+  --border: #545454;
+  --input: #ffffff;
+  --ring: #818cf8;
+}
+
+/* Solución para el copiado y pegado */
+::selection {
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+}
+
+/* Estilos base */
+body { font-family: var(--font-sans); background-color: var(--background); color: var(--foreground); }
+.bg-background { background-color: var(--background); } .bg-card { background-color: var(--card); } .text-foreground { color: var(--foreground); } .text-card-foreground { color: var(--card-foreground); } .border-border { border-color: var(--border); } .bg-primary { background-color: var(--primary); } .text-primary { color: var(--primary); } .text-primary-foreground { color: var(--primary-foreground); } .bg-secondary { background-color: var(--secondary); } .text-secondary { color: var(--secondary); } .bg-accent { background-color: var(--accent); } .text-accent { color: var(--accent); } .bg-destructive { background-color: var(--destructive); } .text-destructive { color: var(--destructive); } .text-muted-foreground { color: var(--muted-foreground); } .bg-muted { background-color: var(--muted); } .ring-ring { box-shadow: 0 0 0 2px var(--ring); }
+::-webkit-scrollbar { width: 8px; } ::-webkit-scrollbar-track { background-color: var(--background); } ::-webkit-scrollbar-thumb { background-color: var(--primary); border-radius: 8px; }
+.collapse-content { max-height: 0; overflow: hidden; transition: max-height 0.5s ease-in-out; }
+.collapse-content.open { max-height: 1000px; }
+.modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 50; opacity: 0; transition: opacity 0.3s ease; pointer-events: none; }
+.modal-overlay.open { opacity: 1; pointer-events: auto; }
+
+/* Estilo para el menú desplegable de acciones */
+.action-menu-popover {
+    position: absolute;
+    right: 0;
+    margin-top: 0.5rem;
+    width: 10rem;
+    z-index: 10;
+    border-radius: 0.5rem;
+    border-width: 1px;
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    background-color: var(--popover);
+    border-color: var(--border);
+}
+
+/* Arreglo para Inputs y Textareas */
+input[type="text"],
+textarea {
+    color: var(--foreground);
+    background-color: var(--background);
+}
+
+/* Efecto Hover para botones de la barra lateral */
+#sidebar-nav button:not(.bg-primary):hover {
+    background-color: var(--muted);
+    color: var(--foreground);
+}
+
+/* Estilos para Tarjetas de Resultados */
+.results-card {
+    background-color: var(--card);
+    border-radius: 0.75rem;
+    border: 1px solid var(--border);
+}
+
+.coverage-score-circle {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--muted);
+    border: 4px solid var(--primary);
+}
+
+.coverage-score-circle span {
+    font-size: 2.25rem;
+    font-weight: 700;
+    color: var(--primary);
+}
+
+/* Estilos para las Tarjetas de Estrategia de Contenido */
+.strategy-card {
+    opacity: 0;
+    transform: translateY(20px);
+    animation: fadeIn 0.5s ease-out forwards;
+}
+
+@keyframes fadeIn {
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.strategy-card:nth-child(2) { animation-delay: 0.2s; }
+.strategy-card:nth-child(3) { animation-delay: 0.4s; }

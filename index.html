@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fundamentos SEO - Dashboard</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Space+Mono&display=swap" rel="stylesheet">
+    <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+    <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div id="auth-container"></div>
+
+    <div id="main-app-container" class="hidden">
+        <div class="flex">
+            <aside class="w-64 h-screen fixed top-0 left-0 bg-card border-r border-border flex flex-col z-40">
+                <div class="flex items-center justify-center h-20 border-b border-border">
+                     <h1 class="text-2xl font-bold text-primary">Fundamentos SEO</h1>
+                </div>
+                <nav id="sidebar-nav" class="flex-1 px-4 py-6 space-y-2"></nav>
+                <div id="user-profile-container" class="px-4 py-4 border-t border-border"></div>
+            </aside>
+
+            <div class="flex-1 ml-64">
+                <header class="h-20 flex items-center justify-between px-8 border-b border-border sticky top-0 bg-background/80 backdrop-blur-md z-30">
+                     <h2 id="header-title" class="text-xl font-semibold text-foreground">Dashboard</h2>
+                    <div class="flex items-center gap-4">
+                         <div id="export-button-container"></div>
+                         <div id="project-selector-container" class="relative"></div>
+                    </div>
+                </header>
+                <main id="main-content" class="p-8"></main>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-container"></div>
+
+    <script type="module" src="js/app.js"></script>
+</body>
+</html>
