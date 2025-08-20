@@ -61,6 +61,7 @@ exports.handler = async function(event, context) {
       if (normalizedKeyUrls.size === 0) break;
 
       const scraperUrl = `http://api.scraperapi.com?api_key=${USER_SCRAPER_API_KEY}&url=${encodeURIComponent(url)}`;
+      console.log(`[DEBUG] Se encontraron ${links.length} enlaces en ${url}.`);
 
       // --- MICRÓFONOS DE DEPURACIÓN ---
       console.log(`[DEBUG] Intentando scrapear: ${url}`);
