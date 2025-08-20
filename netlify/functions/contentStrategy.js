@@ -1,4 +1,4 @@
-// netlify/functions/contentStrategy.js (VERSIÓN FINAL Y COMPLETA)
+// netlify/functions/contentStrategy.js (VERSIÓN FINAL, COMPLETA Y VERIFICADA)
 
 const { createClient } = require('@supabase/supabase-js');
 const { JSDOM } = require('jsdom');
@@ -89,7 +89,11 @@ exports.handler = async function(event, context) {
         const scraperUrl = `http://api.scraperapi.com?api_key=${USER_SCRAPER_API_KEY}&url=${encodeURIComponent(url)}`;
         const scrapeResponse = await fetch(scraperUrl);
         if (scrapeResponse.ok) {
-          const html = await scrapeResponse.text();
+          let html = await scrapeResponse.text();
+          
+          // Elimina todo el contenido de las etiquetas <style> y <script> para evitar errores de parseo.
+          html = html.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '').replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '');
+
           const dom = new JSDOM(html);
           const document = dom.window.document;
           combinedText += `Título: ${document?.querySelector('h1')?.textContent || ''}\nContenido: ${document?.body?.textContent.slice(0, 1500) || ''}\n\n`;
@@ -118,8 +122,6 @@ exports.handler = async function(event, context) {
     const geminiData = await geminiResponse.json();
     const jsonResponseText = geminiData.candidates[0].content.parts[0].text.replace(/```json|```/g, '').trim();
     const analysisResult = JSON.parse(jsonResponseText);
-    
-    // NOTA: Esta herramienta no depende de un proyecto, por lo que no guardamos el resultado.
     
     return {
       statusCode: 200,

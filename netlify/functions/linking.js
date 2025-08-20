@@ -49,7 +49,7 @@ exports.handler = async function(event, context) {
     const visited = new Set([startUrl]);
     const results = new Map();
     let pagesCrawled = 0;
-    const CRAWL_LIMIT = 50;
+    const CRAWL_LIMIT = 20;
 
     const normalizedKeyUrls = new Set(keyUrls.map(u => new URL(u, startUrl).href));
 
