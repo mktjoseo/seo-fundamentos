@@ -1,40 +1,42 @@
-// netlify/functions/linking.js
+// netlify/functions/linking.js (CORREGIDO)
 
 const { createClient } = require('@supabase/supabase-js');
-const { DOMParser } = require('linkedom'); // Usamos una librería más robusta para parsear HTML
+const { DOMParser } = require('linkedom');
 
 exports.handler = async function(event, context) {
   if (event.httpMethod === 'OPTIONS') {
     return {
       statusCode: 200,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'authorization, content-type',
-      },
+      headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, content-type' },
     };
   }
 
   try {
-    // ---- LÓGICA DE AUTENTICACIÓN (Garantía de Clave de Usuario) ----
-    const { user } = context.clientContext;
-    if (!user) throw new Error('Debes estar autenticado para realizar esta acción.');
-    const token = context.clientContext.token.access_token;
+    // ---- LÓGICA DE AUTENTICACIÓN CORREGIDA ----
+    const authHeader = event.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      throw new Error('Se requiere un token de autenticación válido.');
+    }
+    const token = authHeader.split(' ')[1];
 
     const supabase = createClient(
       process.env.SUPABASE_URL,
       process.env.SUPABASE_ANON_KEY,
       { global: { headers: { Authorization: `Bearer ${token}` } } }
     );
+
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) throw new Error('Autenticación fallida: no se pudo verificar al usuario.');
     
     const { data: profile, error: profileError } = await supabase.from('profiles').select('scraper_api_key').single();
     if (profileError) throw new Error('No se pudo encontrar el perfil del usuario.');
     if (!profile.scraper_api_key) throw new Error('El usuario no ha configurado su ScraperAPI Key.');
     
     const USER_SCRAPER_API_KEY = profile.scraper_api_key;
-    // ---- FIN DE LA LÓGICA ----
+    // ---- FIN DE LA LÓGICA CORREGIDA ----
 
     const { startUrl, keyUrls } = JSON.parse(event.body);
-    if (!startUrl || !keyUrls || keyUrls.length === 0) {
+    if (!startUrl || !keyUrls || !keyUrls.length) {
       throw new Error('La URL de inicio y la lista de URLs clave son requeridas.');
     }
 
@@ -87,7 +89,6 @@ exports.handler = async function(event, context) {
       return {
         url: originalUrl,
         depth: depth,
-        // --- MEJORA B: Dato extra para el resaltado visual ---
         isProblematic: typeof depth === 'number' && depth > 3
       };
     });
@@ -100,7 +101,7 @@ exports.handler = async function(event, context) {
 
   } catch (err) {
     return {
-      statusCode: 400,
+      statusCode: 401, // Error de autenticación
       headers: { 'Access-Control-Allow-Origin': '*' },
       body: JSON.stringify({ error: err.message }),
     };
