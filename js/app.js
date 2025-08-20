@@ -189,6 +189,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (settingsButton) setState({ currentView: 'settings', isUserMenuOpen: false });
         });      
 
+        // Limpieza
+
         mainContent.addEventListener('click', async (e) => {
             const actionButton = e.target.closest('button[data-project-action-id]');
             const editButton = e.target.closest('button[data-edit-project-id]');
@@ -196,7 +198,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const deleteButton = e.target.closest('button[data-delete-project-id]');
             const dashboardButton = e.target.closest('button[data-module-key]');
             const moduleButton = e.target.closest('button[data-module]');
-            
+            const exportLinkingBtn = e.target.closest('#export-linking-csv');
+            const copyQuestionsBtn = e.target.closest('#copy-questions-btn');
 
             if (actionButton) {
                 const projectId = parseInt(actionButton.dataset.projectActionId);
@@ -216,7 +219,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 const moduleKey = moduleButton.dataset.module;
                 const token = appState.session.access_token;
                 let payload = {};
-                
+                const currentProject = appState.projects.find(p => p.id === appState.currentProjectId);
+
+                // Herramientas que no dependen de un proyecto
                 if (moduleKey === 'contentStrategy') {
                     const keyword = document.getElementById('content-strategy-keyword-input')?.value;
                     if (!keyword) return alert('Por favor, introduce una palabra clave.');
@@ -225,24 +230,26 @@ document.addEventListener('DOMContentLoaded', () => {
                     const url = document.getElementById('schema-url-input')?.value;
                     if (!url || !url.startsWith('http')) return alert('Por favor, introduce una URL válida.');
                     payload = { url };
-                } else if (moduleKey === 'linking') {
-                    const currentProject = appState.projects.find(p => p.id === appState.currentProjectId);
-                    if (!currentProject) return alert("Selecciona un proyecto.");
-                    const startUrl = `https://${currentProject.url}`;
-                    const keyUrlsText = document.getElementById('linking-key-urls-input')?.value;
-                    if (!keyUrlsText) return alert("Añade URLs clave.");
-                    const keyUrls = keyUrlsText.split('\n').filter(url => url.trim() !== '');
-                    if (keyUrls.length === 0) return alert("Introduce al menos una URL clave.");
-                    payload = { startUrl, keyUrls };
-                } else if (moduleKey === 'structure') {
-                    const keyword = document.getElementById('structure-keyword-input')?.value;
-                    const articleText = document.getElementById('structure-text-input')?.value;
-                    if (!keyword || !articleText) return alert('Introduce la palabra clave y el texto.');
-                    payload = { keyword, articleText, projectId: appState.currentProjectId };
-                } else if (moduleKey === 'zombieUrls') {
-                    const currentProject = appState.projects.find(p => p.id === appState.currentProjectId);
-                    if (!currentProject) return alert("Error: No hay un proyecto seleccionado.");
-                    payload = { domain: currentProject.url };
+                } 
+                // Herramientas que SÍ dependen de un proyecto
+                else {
+                    if (!currentProject) return alert("Selecciona un proyecto para usar esta herramienta.");
+                    
+                    if (moduleKey === 'linking') {
+                        const startUrl = `https://${currentProject.url}`;
+                        const keyUrlsText = document.getElementById('linking-key-urls-input')?.value;
+                        if (!keyUrlsText) return alert("Añade URLs clave.");
+                        const keyUrls = keyUrlsText.split('\n').filter(url => url.trim() !== '');
+                        if (keyUrls.length === 0) return alert("Introduce al menos una URL clave.");
+                        payload = { startUrl, keyUrls, projectId: currentProject.id };
+                    } else if (moduleKey === 'structure') {
+                        const keyword = document.getElementById('structure-keyword-input')?.value;
+                        const articleText = document.getElementById('structure-text-input')?.value;
+                        if (!keyword || !articleText) return alert('Introduce la palabra clave y el texto.');
+                        payload = { keyword, articleText, projectId: currentProject.id };
+                    } else if (moduleKey === 'zombieUrls') {
+                        payload = { domain: currentProject.url, projectId: currentProject.id };
+                    }
                 }
 
                 setState({ isLoading: true });
@@ -266,21 +273,16 @@ document.addEventListener('DOMContentLoaded', () => {
                     alert(`Error: ${error.message}`);
                     setState({ isLoading: false });
                 }
-            }
-            // Pega este bloque dentro del listener de 'mainContent' en js/app.js
-            const exportLinkingBtn = e.target.closest('#export-linking-csv');
-            if (exportLinkingBtn) {
+            } else if (exportLinkingBtn) {
                 const results = appState.moduleResults['linking'];
                 if (!results || results.length === 0) return;
 
-                // Crear el contenido del CSV
                 let csvContent = "data:text/csv;charset=utf-8,";
-                csvContent += "URL,Profundidad (clics)\n"; // Encabezados
+                csvContent += "URL,Profundidad (clics)\n";
                 results.forEach(row => {
                     csvContent += `${row.url},${row.depth}\n`;
                 });
 
-                // Crear y descargar el archivo
                 const encodedUri = encodeURI(csvContent);
                 const link = document.createElement("a");
                 link.setAttribute("href", encodedUri);
@@ -288,10 +290,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
-            }
-            // Pega este bloque dentro del listener de 'mainContent' en js/app.js
-            const copyQuestionsBtn = e.target.closest('#copy-questions-btn');
-            if (copyQuestionsBtn) {
+            } else if (copyQuestionsBtn) {
                 const results = appState.moduleResults['structure'];
                 if (results && results.unansweredQuestions.length > 0) {
                     const textToCopy = results.unansweredQuestions.join('\n');

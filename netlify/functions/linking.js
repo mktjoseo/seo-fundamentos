@@ -1,37 +1,50 @@
-// netlify/functions/linking.js (NUEVA VERSIÓN SIMPLIFICADA)
+// netlify/functions/linking.js (VERSIÓN FINAL Y COMPLETA)
 
 const { createClient } = require('@supabase/supabase-js');
 const { JSDOM } = require('jsdom');
-
-// Las claves ahora se leen directamente del entorno de Netlify
 const USER_SCRAPER_API_KEY = process.env.SCRAPER_API_KEY;
 
 exports.handler = async function(event, context) {
   if (event.httpMethod === 'OPTIONS') {
     return {
       statusCode: 200,
-      headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, content-type' },
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'authorization, content-type',
+      },
     };
   }
 
   try {
-    // Verificamos que el usuario esté autenticado para evitar abuso
-    const { user } = context.clientContext;
-    if (!user) {
-      throw new Error('Debes estar autenticado para usar esta herramienta.');
+    const authHeader = event.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      throw new Error('Se requiere un token de autenticación válido.');
     }
-    // NOTA: Toda la lógica de buscar el perfil y la clave del usuario ha sido eliminada.
+    const token = authHeader.split(' ')[1];
+
+    const supabase = createClient(
+      process.env.SUPABASE_URL,
+      process.env.SUPABASE_ANON_KEY,
+      { global: { headers: { Authorization: `Bearer ${token}` } } }
+    );
+
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
+      throw new Error('Autenticación fallida.');
+    }
 
     if (!USER_SCRAPER_API_KEY) {
       throw new Error('La ScraperAPI Key no está configurada en el servidor.');
     }
     
-    const { startUrl, keyUrls } = JSON.parse(event.body);
+    const { startUrl, keyUrls, projectId } = JSON.parse(event.body);
     if (!startUrl || !keyUrls || !keyUrls.length) {
       throw new Error('La URL de inicio y la lista de URLs clave son requeridas.');
     }
+    if (!projectId) {
+      throw new Error('No se ha proporcionado un ID de proyecto.');
+    }
 
-    // El resto de la lógica del crawler permanece exactamente igual...
     const queue = [{ url: startUrl, depth: 0 }];
     const visited = new Set([startUrl]);
     const results = new Map();
@@ -43,7 +56,7 @@ exports.handler = async function(event, context) {
     while (queue.length > 0 && pagesCrawled < CRAWL_LIMIT) {
       const { url, depth } = queue.shift();
       pagesCrawled++;
-      
+
       if (normalizedKeyUrls.has(url)) {
         results.set(url, depth);
         normalizedKeyUrls.delete(url);
@@ -64,6 +77,7 @@ exports.handler = async function(event, context) {
       const document = dom.window.document;
 
       const links = document.querySelectorAll('a');
+
       for (const link of links) {
         const href = link.getAttribute('href');
         if (href) {
@@ -88,6 +102,16 @@ exports.handler = async function(event, context) {
       };
     });
 
+    const supabaseAdmin = createClient(
+      process.env.SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_KEY
+    );
+    await supabaseAdmin.from('analysis_results').insert({
+      project_id: projectId,
+      module_key: 'linking',
+      results_data: finalResults
+    });
+
     return {
       statusCode: 200,
       headers: { 'Access-Control-Allow-Origin': '*' },
@@ -96,7 +120,7 @@ exports.handler = async function(event, context) {
 
   } catch (err) {
     return {
-      statusCode: 400,
+      statusCode: 401,
       headers: { 'Access-Control-Allow-Origin': '*' },
       body: JSON.stringify({ error: err.message }),
     };

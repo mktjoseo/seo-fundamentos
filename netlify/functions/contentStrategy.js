@@ -1,9 +1,7 @@
-// netlify/functions/contentStrategy.js (VERSIÓN SIMPLIFICADA)
+// netlify/functions/contentStrategy.js (VERSIÓN FINAL Y COMPLETA)
 
 const { createClient } = require('@supabase/supabase-js');
 const { JSDOM } = require('jsdom');
-
-// Las claves ahora se leen directamente del entorno de Netlify
 const USER_SCRAPER_API_KEY = process.env.SCRAPER_API_KEY;
 const USER_SERPER_API_KEY = process.env.SERPER_API_KEY;
 const USER_GEMINI_API_KEY = process.env.GEMINI_API_KEY;
@@ -16,45 +14,77 @@ exports.handler = async function(event, context) {
   if (event.httpMethod === 'OPTIONS') {
     return {
       statusCode: 200,
-      headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, content-type' },
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'authorization, content-type',
+      },
     };
   }
 
   try {
-    // Verificamos que el usuario esté autenticado para evitar abuso
-    const { user } = context.clientContext;
-    if (!user) throw new Error('Debes estar autenticado para usar esta herramienta.');
+    const authHeader = event.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      throw new Error('Se requiere un token de autenticación válido.');
+    }
+    const token = authHeader.split(' ')[1];
+
+    const supabase = createClient(
+      process.env.SUPABASE_URL,
+      process.env.SUPABASE_ANON_KEY,
+      { global: { headers: { Authorization: `Bearer ${token}` } } }
+    );
+
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
+      throw new Error('Autenticación fallida.');
+    }
+
     if (!USER_SCRAPER_API_KEY || !USER_SERPER_API_KEY || !USER_GEMINI_API_KEY) {
       throw new Error('Todas las claves de API deben estar configuradas en el servidor.');
     }
-
+    
     const { keyword } = JSON.parse(event.body);
-    if (!keyword) throw new Error('La palabra clave es requerida.');
-
+    if (!keyword) {
+      throw new Error('La palabra clave es requerida.');
+    }
+    
     const serperResponse = await fetch('https://google.serper.dev/search', {
       method: 'POST',
-      headers: { 'X-API-KEY': USER_SERPER_API_KEY, 'Content-Type': 'application/json' },
+      headers: {
+        'X-API-KEY': USER_SERPER_API_KEY,
+        'Content-Type': 'application/json'
+      },
       body: JSON.stringify({ q: keyword, num: 5 })
     });
-    if (!serperResponse.ok) throw new Error('Error al obtener competidores de Serper.');
+
+    if (!serperResponse.ok) {
+      throw new Error('Error al obtener competidores de Serper.');
+    }
     const serperData = await serperResponse.json();
     
     const competitorDomains = [...new Set(
       serperData.organic?.map(r => getHostname(r.link)).filter(Boolean)
     )].slice(0, 3);
     
-    if (competitorDomains.length === 0) throw new Error('No se encontraron competidores para analizar.');
+    if (competitorDomains.length === 0) {
+      throw new Error('No se encontraron competidores para analizar.');
+    }
 
     const competitorContentPromises = competitorDomains.map(async (domain) => {
       const siteSearchResponse = await fetch('https://google.serper.dev/search', {
         method: 'POST',
-        headers: { 'X-API-KEY': USER_SERPER_API_KEY, 'Content-Type': 'application/json' },
+        headers: {
+          'X-API-KEY': USER_SERPER_API_KEY,
+          'Content-Type': 'application/json'
+        },
         body: JSON.stringify({ q: `site:${domain} "${keyword}"`, num: 2 })
       });
       if (!siteSearchResponse.ok) return { domain, content: "" };
+
       const siteSearchData = await siteSearchResponse.json();
       const relevantUrls = siteSearchData.organic?.map(r => r.link) || [];
       let combinedText = "";
+
       for (const url of relevantUrls) {
         const scraperUrl = `http://api.scraperapi.com?api_key=${USER_SCRAPER_API_KEY}&url=${encodeURIComponent(url)}`;
         const scrapeResponse = await fetch(scraperUrl);
@@ -75,14 +105,21 @@ exports.handler = async function(event, context) {
     
     const geminiResponse = await fetch(geminiUrl, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json'
+      },
       body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
     });
-    if (!geminiResponse.ok) throw new Error('Error al llamar a la API de Gemini para el análisis estratégico.');
+
+    if (!geminiResponse.ok) {
+      throw new Error('Error al llamar a la API de Gemini para el análisis estratégico.');
+    }
     
     const geminiData = await geminiResponse.json();
     const jsonResponseText = geminiData.candidates[0].content.parts[0].text.replace(/```json|```/g, '').trim();
     const analysisResult = JSON.parse(jsonResponseText);
+    
+    // NOTA: Esta herramienta no depende de un proyecto, por lo que no guardamos el resultado.
     
     return {
       statusCode: 200,
@@ -92,7 +129,7 @@ exports.handler = async function(event, context) {
 
   } catch (err) {
     return {
-      statusCode: 400,
+      statusCode: 401,
       headers: { 'Access-Control-Allow-Origin': '*' },
       body: JSON.stringify({ error: err.message }),
     };

@@ -1,9 +1,7 @@
-// netlify/functions/structuredData.js (VERSIÓN SIMPLIFICADA)
+// netlify/functions/structuredData.js (VERSIÓN FINAL Y COMPLETA)
 
 const { createClient } = require('@supabase/supabase-js');
 const { JSDOM } = require('jsdom');
-
-// Las claves ahora se leen directamente del entorno de Netlify
 const USER_SCRAPER_API_KEY = process.env.SCRAPER_API_KEY;
 const USER_SERPER_API_KEY = process.env.SERPER_API_KEY;
 const USER_GEMINI_API_KEY = process.env.GEMINI_API_KEY;
@@ -12,24 +10,45 @@ exports.handler = async function(event, context) {
   if (event.httpMethod === 'OPTIONS') {
     return {
       statusCode: 200,
-      headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, content-type' },
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'authorization, content-type',
+      },
     };
   }
 
   try {
-    // Verificamos que el usuario esté autenticado para evitar abuso
-    const { user } = context.clientContext;
-    if (!user) throw new Error('Debes estar autenticado para usar esta herramienta.');
-    if (!USER_SCRAPER_API_KEY || !USER_SERPER_API_KEY || !USER_GEMINI_API_KEY) {
-        throw new Error('Todas las claves de API deben estar configuradas en el servidor.');
+    const authHeader = event.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      throw new Error('Se requiere un token de autenticación válido.');
+    }
+    const token = authHeader.split(' ')[1];
+
+    const supabase = createClient(
+      process.env.SUPABASE_URL,
+      process.env.SUPABASE_ANON_KEY,
+      { global: { headers: { Authorization: `Bearer ${token}` } } }
+    );
+
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
+      throw new Error('Autenticación fallida.');
     }
 
+    if (!USER_SCRAPER_API_KEY || !USER_SERPER_API_KEY || !USER_GEMINI_API_KEY) {
+      throw new Error('Todas las claves de API deben estar configuradas en el servidor.');
+    }
+    
     const { url } = JSON.parse(event.body);
-    if (!url) throw new Error('La URL es requerida.');
-
+    if (!url) {
+      throw new Error('La URL es requerida.');
+    }
+    
     const scraperUrl = `http://api.scraperapi.com?api_key=${USER_SCRAPER_API_KEY}&url=${encodeURIComponent(url)}`;
     const response = await fetch(scraperUrl);
-    if (!response.ok) throw new Error('No se pudo obtener el HTML de la URL.');
+    if (!response.ok) {
+      throw new Error('No se pudo obtener el HTML de la URL.');
+    }
     
     const html = await response.text();
     const dom = new JSDOM(html);
@@ -90,7 +109,9 @@ exports.handler = async function(event, context) {
       validation: validationResult,
       competitors: competitorSchemas.map(schema => ({ type: schema }))
     };
-
+    
+    // NOTA: Esta herramienta no depende de un proyecto, por lo que no guardamos el resultado.
+    
     return {
       statusCode: 200,
       headers: { 'Access-Control-Allow-Origin': '*' },
@@ -99,7 +120,7 @@ exports.handler = async function(event, context) {
 
   } catch (err) {
     return {
-      statusCode: 400,
+      statusCode: 401,
       headers: { 'Access-Control-Allow-Origin': '*' },
       body: JSON.stringify({ error: err.message }),
     };
