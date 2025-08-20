@@ -61,10 +61,23 @@ exports.handler = async function(event, context) {
       if (normalizedKeyUrls.size === 0) break;
 
       const scraperUrl = `http://api.scraperapi.com?api_key=${USER_SCRAPER_API_KEY}&url=${encodeURIComponent(url)}`;
+
+      // --- MICRÓFONOS DE DEPURACIÓN ---
+      console.log(`[DEBUG] Intentando scrapear: ${url}`);
       const response = await fetch(scraperUrl);
-      if (!response.ok) continue;
-      
+
+      // Añadimos un log para ver la respuesta de ScraperAPI
+      console.log(`[DEBUG] Respuesta de ScraperAPI para ${url}: Status ${response.status}`);
+
+      if (!response.ok) {
+        // Si falla, lo registramos y nos saltamos esta página
+        console.error(`[ERROR] Falló el scrapeo de ${url} con status ${response.status}. Saltando a la siguiente URL.`);
+        continue; 
+      }
+      // --- FIN DE LOS MICRÓFONOS ---
+
       const html = await response.text();
+
       const { document } = new DOMParser().parseFromString(html, "text/html");
       if (!document) continue;
 

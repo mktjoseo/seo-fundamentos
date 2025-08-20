@@ -196,6 +196,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const deleteButton = e.target.closest('button[data-delete-project-id]');
             const dashboardButton = e.target.closest('button[data-module-key]');
             const moduleButton = e.target.closest('button[data-module]');
+            
 
             if (actionButton) {
                 const projectId = parseInt(actionButton.dataset.projectActionId);
@@ -287,6 +288,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
+            }
+            // Pega este bloque dentro del listener de 'mainContent' en js/app.js
+            const copyQuestionsBtn = e.target.closest('#copy-questions-btn');
+            if (copyQuestionsBtn) {
+                const results = appState.moduleResults['structure'];
+                if (results && results.unansweredQuestions.length > 0) {
+                    const textToCopy = results.unansweredQuestions.join('\n');
+                    navigator.clipboard.writeText(textToCopy).then(() => {
+                        copyQuestionsBtn.innerHTML = '<ion-icon name="checkmark-outline"></ion-icon> Copiado!';
+                        setTimeout(() => {
+                            copyQuestionsBtn.innerHTML = '<ion-icon name="copy-outline"></ion-icon> Copiar';
+                        }, 2000);
+                    }).catch(err => {
+                        alert('Error al copiar el texto.');
+                    });
+                }
             }
         });
 

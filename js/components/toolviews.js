@@ -19,6 +19,8 @@ function renderModuleView(appState, inputHTML, resultsRenderer) {
 }
 
 // --- Vistas de cada herramienta ---
+// js/components/toolViews.js (función renderStructureView actualizada)
+
 function renderStructureView(appState) {
     const inputHTML = `
         <h3 class="text-2xl font-bold text-foreground">Parámetros de Análisis</h3>
@@ -49,7 +51,7 @@ function renderStructureView(appState) {
     `;
     const resultsRenderer = (results) => `
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div class="results-card text-center">
+            <div class="results-card text-center p-6">
                 <h4 class="text-lg font-semibold text-foreground">Puntuación de Cobertura</h4>
                 <p class="text-sm text-muted-foreground mt-1">Porcentaje de temas relevantes cubiertos.</p>
                 <div class="flex justify-center items-center py-6">
@@ -58,11 +60,24 @@ function renderStructureView(appState) {
                     </div>
                 </div>
             </div>
-            <div class="results-card">
-                <h4 class="text-lg font-semibold text-foreground">Preguntas sin Responder</h4>
-                <p class="text-sm text-muted-foreground mt-1">Añade estas preguntas a tu contenido.</p>
-                <ul class="mt-4 space-y-3">
-                    ${results.unansweredQuestions.map(q => `<li class="flex items-start gap-3"><ion-icon name="add-circle-outline" class="text-secondary text-xl mt-px"></ion-icon><span class="text-foreground">${q}</span></li>`).join('')}
+            <div class="results-card p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <div>
+                        <h4 class="text-lg font-semibold text-foreground">Preguntas sin Responder</h4>
+                        <p class="text-sm text-muted-foreground mt-1">Añade estas preguntas a tu contenido.</p>
+                    </div>
+                    ${results.unansweredQuestions.length > 0 ? `
+                    <button id="copy-questions-btn" class="text-sm bg-secondary hover:opacity-90 text-secondary-foreground font-semibold px-4 py-2 rounded-md flex items-center gap-2 inline-flex">
+                        <ion-icon name="copy-outline"></ion-icon>
+                        Copiar
+                    </button>
+                    ` : ''}
+                </div>
+                <ul class="space-y-3">
+                    ${results.unansweredQuestions.length > 0
+                        ? results.unansweredQuestions.map(q => `<li class="flex items-start gap-3"><ion-icon name="add-circle-outline" class="text-secondary text-xl mt-px"></ion-icon><span class="text-foreground">${q}</span></li>`).join('')
+                        : `<li class="text-muted-foreground text-sm">¡No se encontraron preguntas sin responder! Buen trabajo.</li>`
+                    }
                 </ul>
             </div>
         </div>
@@ -81,7 +96,6 @@ function renderStructureView(appState) {
         </div>
     `;
 }
-
 // nueva funcion para migrar toolViews.js
 
 function renderLinkingView(appState) {
