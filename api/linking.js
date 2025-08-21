@@ -1,7 +1,10 @@
-// api/linking.js (Versión Final para Vercel usando jsdom)
+// api/linking.js (Versión Final Profesional, con filtros avanzados)
 
 const { createClient } = require('@supabase/supabase-js');
 const { JSDOM } = require('jsdom');
+
+// Expresión regular para ignorar enlaces a archivos comunes
+const FILE_EXTENSION_REGEX = /\.(pdf|jpg|jpeg|png|gif|svg|zip|rar|exe|mp3|mp4|avi)$/i;
 
 export default async function handler(request, response) {
   // Manejo de CORS
@@ -46,14 +49,22 @@ export default async function handler(request, response) {
     const visited = new Set([startUrl]);
     const results = new Map();
     let pagesCrawled = 0;
-    const CRAWL_LIMIT = 50;
+    // Reducimos el límite como medida de seguridad extra
+    const CRAWL_LIMIT = 30;
 
-    const normalizedKeyUrls = new Set(keyUrls.map(u => new URL(u, startUrl).href));
+    const normalizedKeyUrls = new Set(keyUrls.map(u => {
+        let urlObj = new URL(u, startUrl);
+        urlObj.hash = '';
+        urlObj.search = ''; // Ignoramos parámetros de consulta
+        return urlObj.href.endsWith('/') ? urlObj.href.slice(0, -1) : urlObj.href;
+    }));
 
     while (queue.length > 0 && pagesCrawled < CRAWL_LIMIT) {
       const { url, depth } = queue.shift();
       pagesCrawled++;
       
+      console.log(`[CRAWL] Profundidad: ${depth}, Página: ${url}`);
+
       if (normalizedKeyUrls.has(url)) {
         results.set(url, depth);
         normalizedKeyUrls.delete(url);
@@ -70,22 +81,32 @@ export default async function handler(request, response) {
       }
       
       const html = await fetchResponse.text();
-      
-      // Usamos el nuevo parser JSDOM
       const dom = new JSDOM(html);
       const { document } = dom.window;
 
       const links = document.querySelectorAll('a');
-      console.log(`[DEBUG] Se encontraron ${links.length} enlaces en ${url}.`);
 
       for (const link of links) {
         const href = link.getAttribute('href');
         if (href) {
           try {
-            const nextUrl = new URL(href, url).href;
-            if (nextUrl.startsWith(startUrl) && !visited.has(nextUrl)) {
-              visited.add(nextUrl);
-              queue.push({ url: nextUrl, depth: depth + 1 });
+            // ---- LÓGICA DE NORMALIZACIÓN MEJORADA ----
+            if (!href || href.startsWith('#') || href.startsWith('mailto:') || href.startsWith('tel:')) continue;
+            if (FILE_EXTENSION_REGEX.test(href)) continue;
+
+            let nextUrlObj = new URL(href, url);
+            nextUrlObj.hash = ''; // Eliminamos el fragmento (#...)
+            nextUrlObj.search = ''; // Eliminamos parámetros de consulta (?...)
+            
+            let normalizedUrl = nextUrlObj.href;
+            // Quitamos la barra final para evitar duplicados (ej: /blog y /blog/)
+            if (normalizedUrl.endsWith('/')) {
+                normalizedUrl = normalizedUrl.slice(0, -1);
+            }
+
+            if (normalizedUrl.startsWith(startUrl) && !visited.has(normalizedUrl)) {
+              visited.add(normalizedUrl);
+              queue.push({ url: normalizedUrl, depth: depth + 1 });
             }
           } catch (_) {}
         }
@@ -93,7 +114,14 @@ export default async function handler(request, response) {
     }
 
     const finalResults = keyUrls.map(originalUrl => {
-      const normalizedUrl = new URL(originalUrl, startUrl).href;
+        let urlObj = new URL(originalUrl, startUrl);
+        urlObj.hash = '';
+        urlObj.search = '';
+        let normalizedUrl = urlObj.href;
+        if (normalizedUrl.endsWith('/')) {
+            normalizedUrl = normalizedUrl.slice(0, -1);
+        }
+      
       const depth = results.has(normalizedUrl) ? results.get(normalizedUrl) : 'No encontrado';
       return {
         url: originalUrl,
