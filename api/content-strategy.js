@@ -1,4 +1,4 @@
-// api/content-strategy.js (Versión para Vercel con jsdom)
+// api/content-strategy.js (Versión para Vercel, endurecida y optimizada)
 
 const { createClient } = require('@supabase/supabase-js');
 const { JSDOM } = require('jsdom');
@@ -52,11 +52,20 @@ export default async function handler(request, response) {
       headers: { 'X-API-KEY': USER_SERPER_API_KEY, 'Content-Type': 'application/json' },
       body: JSON.stringify({ q: keyword, num: 5 })
     });
-    if (!serperResponse.ok) throw new Error('Error al obtener competidores de Serper.');
+    if (!serperResponse.ok) {
+        // Mensaje de error mejorado
+        throw new Error(`Error al obtener competidores de Serper (Status: ${serperResponse.status}). Verifica tu clave de API de Serper.`);
+    }
+    
     const serperData = await serperResponse.json();
+
+    // Verificación de resultados antes de usarlos
+    if (!serperData.organic) {
+        throw new Error('La respuesta de Serper no contiene resultados de búsqueda. Revisa tu clave o los términos de búsqueda.');
+    }
     
     const competitorDomains = [...new Set(
-      serperData.organic?.map(r => getHostname(r.link)).filter(Boolean)
+      serperData.organic.map(r => getHostname(r.link)).filter(Boolean)
     )].slice(0, 3);
     
     if (competitorDomains.length === 0) throw new Error('No se encontraron competidores para analizar.');
@@ -69,6 +78,7 @@ export default async function handler(request, response) {
       });
       if (!siteSearchResponse.ok) return { domain, content: "" };
       const siteSearchData = await siteSearchResponse.json();
+      
       const relevantUrls = siteSearchData.organic?.map(r => r.link) || [];
       let combinedText = "";
       for (const url of relevantUrls) {
@@ -76,7 +86,9 @@ export default async function handler(request, response) {
         const scrapeResponse = await fetch(scraperUrl);
         if (scrapeResponse.ok) {
           const html = await scrapeResponse.text();
-          const dom = new JSDOM(html);
+          
+          // JSDOM optimizado para no cargar recursos externos (soluciona el error de CSS)
+          const dom = new JSDOM(html, { resources: "usable" });
           const { document } = dom.window;
           combinedText += `Título: ${document?.querySelector('h1')?.textContent || ''}\nContenido: ${document?.body?.innerText.slice(0, 1500) || ''}\n\n`;
         }
