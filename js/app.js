@@ -226,14 +226,14 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (!keyUrlsText) return alert("Añade URLs clave.");
                         const keyUrls = keyUrlsText.split('\n').filter(url => url.trim() !== '');
                         if (keyUrls.length === 0) return alert("Introduce al menos una URL clave.");
-                        payload = { startUrl, keyUrls };
+                        payload = { startUrl, keyUrls, projectId: currentProject.id };
                     } else if (moduleKey === 'structure') {
                         const keyword = document.getElementById('structure-keyword-input')?.value;
                         const articleText = document.getElementById('structure-text-input')?.value;
                         if (!keyword || !articleText) return alert('Introduce la palabra clave y el texto.');
-                        payload = { keyword, articleText };
+                        payload = { keyword, articleText, projectId: currentProject.id };
                     } else if (moduleKey === 'zombie-urls') {
-                        payload = { domain: currentProject.url };
+                        payload = { domain: currentProject.url, projectId: currentProject.id };
                     }
                 }
 

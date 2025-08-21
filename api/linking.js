@@ -1,4 +1,4 @@
-// api/linking.js (Versión que devuelve el log de rastreo)
+// api/linking.js (Versión con guardado en la base de datos)
 
 const { createClient } = require('@supabase/supabase-js');
 const { JSDOM } = require('jsdom');
@@ -38,16 +38,16 @@ export default async function handler(request, response) {
     const USER_SCRAPER_API_KEY = profile.scraper_api_key;
     // ---- FIN DE LA LÓGICA ----
 
-    const { startUrl, keyUrls } = request.body;
-    if (!startUrl || !keyUrls || !keyUrls.length) {
-      throw new Error('La URL de inicio y la lista de URLs clave son requeridas.');
+    const { startUrl, keyUrls, projectId } = request.body;
+    if (!startUrl || !keyUrls || !keyUrls.length || !projectId) {
+      throw new Error('Faltan datos requeridos (startUrl, keyUrls, or projectId).');
     }
 
-    // --- Lógica del Crawler ---
+    // --- Lógica del Crawler (sin cambios) ---
     const queue = [{ url: startUrl, depth: 0 }];
     const visited = new Set([startUrl]);
     const results = new Map();
-    const crawlLogData = [{ url: startUrl, depth: 0 }]; // Aquí guardaremos el log
+    const crawlLogData = [{ url: startUrl, depth: 0 }];
 
     let pagesCrawled = 0;
     const CRAWL_LIMIT = 30;
@@ -79,7 +79,6 @@ export default async function handler(request, response) {
       const html = await fetchResponse.text();
       const dom = new JSDOM(html);
       const { document } = dom.window;
-
       const links = document.querySelectorAll('a');
 
       for (const link of links) {
@@ -126,11 +125,27 @@ export default async function handler(request, response) {
       };
     });
     
-    // Devolvemos un objeto con los resultados y el log completo del rastreo
-    response.status(200).json({
+    const dataToReturn = {
         results: finalResults,
         crawlLog: crawlLogData
-    });
+    };
+    
+    // ---- NUEVO: Guardar en la Base de Datos ----
+    const { error: insertError } = await supabase
+      .from('analisis_resultados')
+      .insert({
+        project_id: projectId,
+        module_type: 'linking',
+        results_data: dataToReturn 
+      });
+
+    if (insertError) {
+      console.error("Error al guardar el resultado del análisis:", insertError.message);
+      // No detenemos la ejecución, el usuario aún recibe su resultado.
+    }
+    // ---- FIN DEL BLOQUE DE GUARDADO ----
+    
+    response.status(200).json(dataToReturn);
 
   } catch (err) {
     response.status(401).json({ error: err.message });
