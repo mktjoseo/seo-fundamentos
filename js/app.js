@@ -1,15 +1,15 @@
-// js/app.js (Versión completa y corregida)
+// js/app.js (Versión con rutas y nombres estandarizados a kebab-case)
 
 // --- 1. IMPORTACIONES DE MÓDulos ---
-import { renderDashboard, renderCharts } from './components/dashboardView.js';
-import { renderProjectsView } from './components/projectsView.js';
+import { renderDashboard, renderCharts } from './components/dashboard-view.js';
+import { renderProjectsView } from './components/projects-view.js';
 import { renderUserProfile, buildSidebarNav } from './components/sidebar.js';
-import { renderAuthView } from './components/authView.js';
-import { renderSettingsView } from './components/settingsView.js';
+import { renderAuthView } from './components/auth-view.js';
+import { renderSettingsView } from './components/settings-view.js';
 import { 
     renderStructureView, renderLinkingView, renderZombiesView,
     renderSchemaView, renderContentStrategyView
-} from './components/toolViews.js';
+} from './components/tool-views.js';
 
 document.addEventListener('DOMContentLoaded', () => {
 
@@ -19,7 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     // --- 3. DATOS Y ESTADO DE LA APLICACIÓN ---
-    const mockProjectDetails = {1: { healthScore: 88, issuesBySeverity: { high: 2, medium: 5, low: 12 }, modules: { structure: { name: "Estructura y Relevancia", health: 95, status: "secondary", issuesCount: 1, issuesList: [{ text: "El H1 de la home no contiene la palabra clave principal.", severity: 'low'}] }, linking: { name: "Profundidad de Enlazado", health: 75, status: "accent", issuesCount: 1, issuesList: [{ text: "Página clave /politica-de-devoluciones a 5 clics de profundidad.", severity: 'high'}] }, zombieUrls: { name: "URLs Zombie", health: 98, status: "secondary", issuesCount: 2, issuesList: [{ text: "/promociones/navidad-2019 no está indexada.", severity: 'medium'}] }, structuredData: { name: "Datos Estructurados", health: 60, status: "destructive", issuesCount: 1, issuesList: [{ text: "Falta la propiedad 'aggregateRating' en el schema de Producto.", severity: 'high'}] }, contentStrategy: { name: "Estrategia de Contenido", health: 90, status: "secondary", issuesList: [] } } }, };
+    const mockProjectDetails = {1: { healthScore: 88, issuesBySeverity: { high: 2, medium: 5, low: 12 }, modules: { structure: { name: "Estructura y Relevancia", health: 95, status: "secondary", issuesCount: 1, issuesList: [{ text: "El H1 de la home no contiene la palabra clave principal.", severity: 'low'}] }, linking: { name: "Profundidad de Enlazado", health: 75, status: "accent", issuesCount: 1, issuesList: [{ text: "Página clave /politica-de-devoluciones a 5 clics de profundidad.", severity: 'high'}] }, 'zombie-urls': { name: "URLs Zombie", health: 98, status: "secondary", issuesCount: 2, issuesList: [{ text: "/promociones/navidad-2019 no está indexada.", severity: 'medium'}] }, 'structured-data': { name: "Datos Estructurados", health: 60, status: "destructive", issuesCount: 1, issuesList: [{ text: "Falta la propiedad 'aggregateRating' en el schema de Producto.", severity: 'high'}] }, 'content-strategy': { name: "Estrategia de Contenido", health: 90, status: "secondary", issuesList: [] } } }, };
 
     const appState = {
         session: null, 
@@ -28,8 +28,6 @@ document.addEventListener('DOMContentLoaded', () => {
         projects: [], 
         currentProjectId: null, 
         editingProjectId: null,
-        schemaAuditorUrl: '',
-        contentStrategyKeyword: '',
         isDropdownOpen: false, 
         isLoading: false, 
         projectSearchQuery: '', 
@@ -41,14 +39,15 @@ document.addEventListener('DOMContentLoaded', () => {
         projectActionsOpen: {},
     };
     
+    // Las claves ahora están en kebab-case para coincidir con los nombres de archivo
     const views = {
-        dashboard: { name: 'Dashboard', icon: 'grid-outline' },
-        projects: { name: 'Proyectos', icon: 'briefcase-outline' },
-        structure: { name: 'Estructura y Relevancia', icon: 'document-text-outline' },
-        linking: { name: 'Profundidad de Enlazado', icon: 'git-network-outline' },
-        zombieUrls: { name: 'Análisis de URLs Zombie', icon: 'walk-outline' },
-        structuredData: { name: 'Auditor de Datos Estructurados', icon: 'code-slash-outline' },
-        contentStrategy: { name: 'Estrategia de Contenido', icon: 'apps-outline' }
+        'dashboard': { name: 'Dashboard', icon: 'grid-outline' },
+        'projects': { name: 'Proyectos', icon: 'briefcase-outline' },
+        'structure': { name: 'Estructura y Relevancia', icon: 'document-text-outline' },
+        'linking': { name: 'Profundidad de Enlazado', icon: 'git-network-outline' },
+        'zombie-urls': { name: 'Análisis de URLs Zombie', icon: 'walk-outline' },
+        'structured-data': { name: 'Auditor de Datos Estructurados', icon: 'code-slash-outline' },
+        'content-strategy': { name: 'Estrategia de Contenido', icon: 'apps-outline' }
     };
 
     // --- 4. REFERENCIAS A ELEMENTOS DEL DOM ---
@@ -70,13 +69,11 @@ document.addEventListener('DOMContentLoaded', () => {
     
     function renderProjectSelector() {
         if (!appState.currentProjectId || appState.projects.length === 0) {
-            projectSelectorContainer.innerHTML = '';
-            return;
+            projectSelectorContainer.innerHTML = ''; return;
         }
         const currentProject = appState.projects.find(p => p.id === appState.currentProjectId);
         if (!currentProject) {
-            projectSelectorContainer.innerHTML = '';
-            return;
+            projectSelectorContainer.innerHTML = ''; return;
         };
         const dropdownItems = appState.projects
             .filter(p => p.id !== appState.currentProjectId)
@@ -122,14 +119,14 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             const viewMap = {
-                dashboard: () => renderDashboard(appState, mockProjectDetails[appState.currentProjectId]),
-                projects: () => renderProjectsView(appState),
-                settings: () => renderSettingsView(appState, appState.userProfile),
-                structure: () => renderStructureView(appState),
-                linking: () => renderLinkingView(appState),
-                zombieUrls: () => renderZombiesView(appState),
-                structuredData: () => renderSchemaView(appState),
-                contentStrategy: () => renderContentStrategyView(appState),
+                'dashboard': () => renderDashboard(appState, mockProjectDetails[appState.currentProjectId]),
+                'projects': () => renderProjectsView(appState),
+                'settings': () => renderSettingsView(appState, appState.userProfile),
+                'structure': () => renderStructureView(appState),
+                'linking': () => renderLinkingView(appState),
+                'zombie-urls': () => renderZombiesView(appState),
+                'structured-data': () => renderSchemaView(appState),
+                'content-strategy': () => renderContentStrategyView(appState),
             };
             const renderFunction = viewMap[appState.currentView] || (() => `<div class="p-4 bg-card rounded-lg">Vista no encontrada.</div>`);
             
@@ -155,12 +152,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- 6. EVENT LISTENERS ---
     function setupEventListeners() {
         sidebarNav.addEventListener('click', e => {
-        const link = e.target.closest('button[data-view]');
-        if (link) {
-            // Ahora siempre se puede cambiar de vista.
-            setState({ currentView: link.dataset.view });
-        }
-    });
+            const link = e.target.closest('button[data-view]');
+            if (link) { setState({ currentView: link.dataset.view }); }
+        });
+
         projectSelectorContainer.addEventListener('click', e => {
             e.stopPropagation();
             const button = e.target.closest('button');
@@ -168,11 +163,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (button.id === 'project-selector-btn') {
                 setState({ isDropdownOpen: !appState.isDropdownOpen });
             } else if (button.dataset.projectId) {
-                setState({ 
-                    currentProjectId: parseInt(button.dataset.projectId), 
-                    isDropdownOpen: false, 
-                    currentView: 'dashboard' 
-                });
+                setState({ currentProjectId: parseInt(button.dataset.projectId), isDropdownOpen: false, currentView: 'dashboard' });
             }
         });
 
@@ -181,15 +172,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const logoutButton = e.target.closest('#logout-btn');
             const settingsButton = e.target.closest('#open-settings-btn');
 
-            if (profileButton) {
-                e.stopPropagation(); // Añadimos esto para más control
-                setState({ isUserMenuOpen: !appState.isUserMenuOpen });
-            }
+            if (profileButton) { e.stopPropagation(); setState({ isUserMenuOpen: !appState.isUserMenuOpen }); }
             if (logoutButton) supabaseClient.auth.signOut();
             if (settingsButton) setState({ currentView: 'settings', isUserMenuOpen: false });
         });      
-
-        // Limpieza
 
         mainContent.addEventListener('click', async (e) => {
             const actionButton = e.target.closest('button[data-project-action-id]');
@@ -221,18 +207,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 let payload = {};
                 const currentProject = appState.projects.find(p => p.id === appState.currentProjectId);
 
-                // Herramientas que no dependen de un proyecto
-                if (moduleKey === 'contentStrategy') {
-                    const keyword = document.getElementById('content-strategy-keyword-input')?.value;
-                    if (!keyword) return alert('Por favor, introduce una palabra clave.');
-                    payload = { keyword };
-                } else if (moduleKey === 'structuredData') {
-                    const url = document.getElementById('schema-url-input')?.value;
-                    if (!url || !url.startsWith('http')) return alert('Por favor, introduce una URL válida.');
-                    payload = { url };
-                } 
-                // Herramientas que SÍ dependen de un proyecto
-                else {
+                if (moduleKey === 'content-strategy' || moduleKey === 'structured-data') {
+                    if (moduleKey === 'content-strategy') {
+                        const keyword = document.getElementById('content-strategy-keyword-input')?.value;
+                        if (!keyword) return alert('Por favor, introduce una palabra clave.');
+                        payload = { keyword };
+                    } else if (moduleKey === 'structured-data') {
+                        const url = document.getElementById('schema-url-input')?.value;
+                        if (!url || !url.startsWith('http')) return alert('Por favor, introduce una URL válida.');
+                        payload = { url };
+                    }
+                } else {
                     if (!currentProject) return alert("Selecciona un proyecto para usar esta herramienta.");
                     
                     if (moduleKey === 'linking') {
@@ -241,14 +226,14 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (!keyUrlsText) return alert("Añade URLs clave.");
                         const keyUrls = keyUrlsText.split('\n').filter(url => url.trim() !== '');
                         if (keyUrls.length === 0) return alert("Introduce al menos una URL clave.");
-                        payload = { startUrl, keyUrls, projectId: currentProject.id };
+                        payload = { startUrl, keyUrls };
                     } else if (moduleKey === 'structure') {
                         const keyword = document.getElementById('structure-keyword-input')?.value;
                         const articleText = document.getElementById('structure-text-input')?.value;
                         if (!keyword || !articleText) return alert('Introduce la palabra clave y el texto.');
-                        payload = { keyword, articleText, projectId: currentProject.id };
-                    } else if (moduleKey === 'zombieUrls') {
-                        payload = { domain: currentProject.url, projectId: currentProject.id };
+                        payload = { keyword, articleText };
+                    } else if (moduleKey === 'zombie-urls') {
+                        payload = { domain: currentProject.url };
                     }
                 }
 
@@ -257,10 +242,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const functionUrl = `/api/${moduleKey}`;
                     const response = await fetch(functionUrl, {
                         method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${token}`
-                        },
+                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                         body: JSON.stringify(payload)
                     });
                     if (!response.ok) {
@@ -276,13 +258,9 @@ document.addEventListener('DOMContentLoaded', () => {
             } else if (exportLinkingBtn) {
                 const results = appState.moduleResults['linking'];
                 if (!results || results.length === 0) return;
-
                 let csvContent = "data:text/csv;charset=utf-8,";
                 csvContent += "URL,Profundidad (clics)\n";
-                results.forEach(row => {
-                    csvContent += `${row.url},${row.depth}\n`;
-                });
-
+                results.forEach(row => { csvContent += `${row.url},${row.depth}\n`; });
                 const encodedUri = encodeURI(csvContent);
                 const link = document.createElement("a");
                 link.setAttribute("href", encodedUri);
@@ -296,12 +274,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     const textToCopy = results.unansweredQuestions.join('\n');
                     navigator.clipboard.writeText(textToCopy).then(() => {
                         copyQuestionsBtn.innerHTML = '<ion-icon name="checkmark-outline"></ion-icon> Copiado!';
-                        setTimeout(() => {
-                            copyQuestionsBtn.innerHTML = '<ion-icon name="copy-outline"></ion-icon> Copiar';
-                        }, 2000);
-                    }).catch(err => {
-                        alert('Error al copiar el texto.');
-                    });
+                        setTimeout(() => { copyQuestionsBtn.innerHTML = '<ion-icon name="copy-outline"></ion-icon> Copiar'; }, 2000);
+                    }).catch(err => { alert('Error al copiar el texto.'); });
                 }
             }
         });
@@ -331,23 +305,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (Object.keys(updates).length > 0) {
                     const { data, error } = await supabaseClient.from('profiles').update(updates).eq('id', appState.session.user.id).select().single();
                     if (error) alert('Error al guardar las claves: ' + error.message);
-                    else {
-                        alert('¡Claves guardadas con éxito!');
-                        form.reset();
-                        setState({ userProfile: data });
-                    }
-                } else {
-                    alert('No has introducido ninguna clave nueva para guardar.');
-                }
+                    else { alert('¡Claves guardadas con éxito!'); form.reset(); setState({ userProfile: data }); }
+                } else { alert('No has introducido ninguna clave nueva para guardar.'); }
             } else if (form.id === 'add-project-form') {
                 const nameInput = form.querySelector('#project-name');
                 const urlInput = form.querySelector('#project-url');
                 const { data: newProject, error } = await supabaseClient.from('projects').insert({ name: nameInput.value, url: urlInput.value, user_id: appState.session.user.id }).select().single();
                 if (error) alert('Hubo un error al guardar el proyecto.');
-                else {
-                    const newProjects = [...appState.projects, newProject];
-                    setState({ projects: newProjects, currentProjectId: newProject.id, currentView: 'dashboard' });
-                }
+                else { const newProjects = [...appState.projects, newProject]; setState({ projects: newProjects, currentProjectId: newProject.id, currentView: 'dashboard' });}
                 form.reset();
             } else if (form.dataset.editFormId) {
                 const projectId = parseInt(form.dataset.editFormId);
@@ -355,10 +320,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const urlInput = form.querySelector('input[name="url"]');
                 const { data: updatedProject, error } = await supabaseClient.from('projects').update({ name: nameInput.value, url: urlInput.value }).eq('id', projectId).select().single();
                 if (error) alert('Hubo un error al actualizar el proyecto.');
-                else {
-                    const updatedProjects = appState.projects.map(p => p.id === projectId ? updatedProject : p);
-                    setState({ projects: updatedProjects, editingProjectId: null });
-                }
+                else { const updatedProjects = appState.projects.map(p => p.id === projectId ? updatedProject : p); setState({ projects: updatedProjects, editingProjectId: null }); }
             }
             submitButton.disabled = false;
             submitButton.innerHTML = originalButtonHTML;
@@ -380,9 +342,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 else {
                     const updatedProjects = appState.projects.filter(p => p.id !== projectIdToDelete);
                     setState({
-                        projects: updatedProjects, 
-                        isDeleteModalOpen: false, 
-                        projectToDelete: null,
+                        projects: updatedProjects, isDeleteModalOpen: false, projectToDelete: null,
                         currentProjectId: appState.currentProjectId === projectIdToDelete ? (updatedProjects[0]?.id || null) : appState.currentProjectId,
                     });
                 }
@@ -429,9 +389,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
-    // nuevo function con recuperar contraseña
+
     function setupAuthEventListeners() {
-        // Este listener gestiona los envíos de los formularios de login y registro
         authContainer.addEventListener('submit', async (e) => {
             e.preventDefault();
             const formId = e.target.id;
@@ -444,12 +403,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (formId === 'login-form') {
                 const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
-                
                 if (error) {
                     messageDiv.textContent = `Error: ${error.message}`;
                     messageDiv.className = 'text-destructive font-semibold';
                 }
-                
                 submitButton.disabled = false;
                 submitButton.textContent = 'Iniciar Sesión';
             }
@@ -472,40 +429,31 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // Este nuevo listener gestiona los clics en los botones y enlaces
         authContainer.addEventListener('click', async (e) => {
-            // Lógica para el enlace de recuperar contraseña
             if (e.target.id === 'forgot-password-link') {
                 e.preventDefault();
                 const email = window.prompt("Por favor, introduce tu dirección de email para recuperar tu contraseña:");
                 if (email) {
                     const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
-                        redirectTo: window.location.origin, // Redirige a la página principal después del reseteo
+                        redirectTo: window.location.origin,
                     });
-                    if (error) {
-                        alert("Error: " + error.message);
-                    } else {
-                        alert("Se ha enviado un enlace de recuperación a tu email.");
-                    }
+                    if (error) { alert("Error: " + error.message); }
+                    else { alert("Se ha enviado un enlace de recuperación a tu email."); }
                 }
             }
             
-            // Lógica para mostrar/ocultar contraseña
             const toggleButton = e.target.closest('[data-toggle-password]');
             if (toggleButton) {
                 const inputId = toggleButton.dataset.togglePassword;
                 const passwordInput = document.getElementById(inputId);
                 const icon = toggleButton.querySelector('ion-icon');
                 if (passwordInput.type === 'password') {
-                    passwordInput.type = 'text';
-                    icon.setAttribute('name', 'eye-outline');
+                    passwordInput.type = 'text'; icon.setAttribute('name', 'eye-outline');
                 } else {
-                    passwordInput.type = 'password';
-                    icon.setAttribute('name', 'eye-off-outline');
+                    passwordInput.type = 'password'; icon.setAttribute('name', 'eye-off-outline');
                 }
             }
 
-            // Lógica para cambiar entre formularios de login y registro
             const loginContainer = document.getElementById('login-form-container');
             const registerContainer = document.getElementById('register-form-container');
             if (e.target.id === 'show-register-btn') {
@@ -518,6 +466,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+
     // --- 7. INICIALIZACIÓN ---
     async function initAppForUser() {
         const [projectsResponse, profileResponse] = await Promise.all([
@@ -544,26 +493,20 @@ document.addEventListener('DOMContentLoaded', () => {
         setupEventListeners();
         render();
     }
+    
     function init() {
-        render(); // Renderizado inicial para mostrar el login, esto está bien.
-        
         supabaseClient.auth.onAuthStateChange(async (event, session) => {
-            // --- ESTA ES LA LÓGICA CORREGIDA ---
-            // Comprobamos si el token de la sesión ha cambiado.
-            // Esto maneja de forma fiable el login, logout, y el refresco de página.
             if (session?.access_token !== appState.session?.access_token) {
                 appState.session = session;
                 if (session) {
-                    // Si hay una nueva sesión, cargamos los datos del usuario.
                     await initAppForUser();
                 } else {
-                    // Si la sesión es nula (logout), reseteamos el estado y mostramos el login.
                     setState({ userProfile: null, projects: [], currentProjectId: null });
                 }
             }
         });
-        
       setupAuthEventListeners();
+      render();
     }
     
     init();

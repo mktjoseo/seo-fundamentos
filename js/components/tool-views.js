@@ -1,25 +1,4 @@
-// js/components/toolViews.js (Versión Corregida)
-
-// Esta es una función genérica que usan todas las vistas de herramientas.
-function renderModuleView(appState, inputHTML, resultsRenderer) {
-    const results = appState.moduleResults[appState.currentView];
-    let resultsHTML = '';
-    if(appState.isLoading) {
-        resultsHTML = `<div class="text-center py-10"><div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div><p class="mt-4 text-muted-foreground">Analizando...</p></div>`;
-    } else if (results) {
-        resultsHTML = resultsRenderer(results);
-    }
-
-    return `
-        <div class="max-w-5xl mx-auto space-y-8">
-            <div class="bg-card p-6 rounded-lg border border-border">${inputHTML}</div>
-            <div id="results-container">${resultsHTML}</div>
-        </div>
-    `;
-}
-
-// --- Vistas de cada herramienta ---
-// js/components/toolViews.js (función renderStructureView actualizada)
+// js/components/tool-views.js (Versión con data-module estandarizado a kebab-case)
 
 function renderStructureView(appState) {
     const inputHTML = `
@@ -96,7 +75,6 @@ function renderStructureView(appState) {
         </div>
     `;
 }
-// nueva funcion para migrar toolViews.js
 
 function renderLinkingView(appState) {
     const currentProject = appState.projects.find(p => p.id === appState.currentProjectId);
@@ -120,7 +98,6 @@ function renderLinkingView(appState) {
         </div>`;
 
     const resultsRenderer = (results) => {
-        // --- MEJORA A: Botón para Exportar a CSV ---
         const exportButtonHTML = `
             <div class="text-right mb-4">
                 <button id="export-linking-csv" class="text-sm bg-secondary hover:opacity-90 text-secondary-foreground font-semibold px-4 py-2 rounded-md flex items-center gap-2 inline-flex">
@@ -190,10 +167,10 @@ function renderZombiesView(appState) {
             </div>
         </div>
         <div class="text-right mt-4">
-            <button data-module="zombieUrls" class="bg-primary hover:opacity-90 text-primary-foreground font-semibold px-6 py-2 rounded-md">Buscar URLs Zombie</button>
+            <button data-module="zombie-urls" class="bg-primary hover:opacity-90 text-primary-foreground font-semibold px-6 py-2 rounded-md">Buscar URLs Zombie</button>
         </div>`;
-
-    return renderModuleView(appState, inputHTML, (results) => `
+    
+    const resultsRenderer = (results) => `
         <div class="bg-card p-6 rounded-lg border border-border space-y-6">
             <div>
                 <h4 class="text-lg font-semibold">Diagnóstico de Indexación</h4>
@@ -212,14 +189,28 @@ function renderZombiesView(appState) {
                 </div>
             </div>
         </div>
-    `);
+    `;
+
+    return `
+        <div class="max-w-4xl mx-auto space-y-8">
+            <div class="bg-card p-6 rounded-lg border border-border">${inputHTML}</div>
+            <div id="results-container">
+                ${appState.isLoading
+                    ? `<div class="results-card flex items-center justify-center h-48"><div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div></div>`
+                    : appState.moduleResults['zombie-urls']
+                        ? resultsRenderer(appState.moduleResults['zombie-urls'])
+                        : `<div class="text-center py-12"><p class="text-muted-foreground">Los resultados de tu análisis aparecerán aquí.</p></div>`
+                }
+            </div>
+        </div>
+    `;
 }
 
 function renderSchemaView(appState) {
     const inputHTML = `
         <h3 class="text-2xl font-bold text-foreground">Auditor de Datos Estructurados (Schema)</h3>
         <p class="text-muted-foreground mt-2">
-            Esta herramienta inteligente valida el código Schema (JSON-LD) de una URL. Usa <strong>ScraperAPI</strong> para obtener el HTML, <strong>Gemini</strong> para analizar y validar el código, y <strong>Serper</strong> para identificar los tipos de Schema que usan tus competidores directos en los resultados de búsqueda.
+            Esta herramienta inteligente valida el código Schema (JSON-LD) de una URL.
         </p>
         <div class="mt-6 space-y-4">
             <div>
@@ -228,19 +219,18 @@ function renderSchemaView(appState) {
                     <ion-icon name="link-outline" class="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"></ion-icon>
                     <input id="schema-url-input" type="text"
                            class="w-full bg-background border border-border rounded-md pl-10 pr-4 py-2 focus:outline-none focus:ring-2 focus:ring-ring"
-                           placeholder="https://ejemplo.com/pagina-con-schema"
-                           value="${appState.schemaAuditorUrl || ''}">
+                           placeholder="https://ejemplo.com/pagina-con-schema">
                 </div>
             </div>
         </div>
         <div class="text-right mt-6">
-            <button data-module="structuredData" class="bg-primary hover:opacity-90 text-primary-foreground font-semibold px-6 py-2.5 rounded-md">Auditar Schema</button>
+            <button data-module="structured-data" class="bg-primary hover:opacity-90 text-primary-foreground font-semibold px-6 py-2.5 rounded-md">Auditar Schema</button>
         </div>`;
 
     const resultsRenderer = (results) => `
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div class="results-card">
-                <h4 class="text-lg font-semibold text-foreground mb-4">Informe de Validación de Gemini</h4>
+                <h4 class="text-lg font-semibold text-foreground mb-4">Informe de Validación</h4>
                 <div class="${results.validation.status.includes('Error') ? 'bg-destructive/10 text-destructive border-destructive/30' : 'bg-accent/10 text-accent border-accent/30'} p-4 rounded-md border">
                     <p class="font-bold flex items-center gap-2">
                         <ion-icon name="${results.validation.status.includes('Error') ? 'close-circle-outline' : 'checkmark-circle-outline'}"></ion-icon>
@@ -263,31 +253,26 @@ function renderSchemaView(appState) {
             </div>
         </div>`;
 
-    const results = appState.moduleResults['structuredData'];
-    let resultsHTML = '';
-    if (appState.isLoading) {
-        resultsHTML = `<div class="results-card text-center py-12"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div><p class="mt-4 text-muted-foreground">Auditando URL con las 3 APIs...</p></div>`;
-    } else if (results) {
-        resultsHTML = resultsRenderer(results);
-    }
-
     return `
         <div class="max-w-4xl mx-auto space-y-8">
             <div class="bg-card p-6 rounded-lg border border-border">${inputHTML}</div>
-            <div id="results-container">${resultsHTML}</div>
-        </div>`;
+            <div id="results-container">
+                ${appState.isLoading
+                    ? `<div class="results-card flex items-center justify-center h-48"><div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div></div>`
+                    : appState.moduleResults['structured-data']
+                        ? resultsRenderer(appState.moduleResults['structured-data'])
+                        : `<div class="text-center py-12"><p class="text-muted-foreground">Los resultados de tu análisis aparecerán aquí.</p></div>`
+                }
+            </div>
+        </div>
+    `;
 }
 
 function renderContentStrategyView(appState) {
     const inputHTML = `
         <h3 class="text-2xl font-bold text-foreground">Generador de Estrategia de Contenido</h3>
         <div class="text-muted-foreground mt-2 space-y-2 text-sm">
-            <p><strong>Esta es la herramienta más potente de la suite.</strong> Actúa como un estratega SEO automatizado para descubrir oportunidades de contenido únicas.</p>
-            <ul class="list-disc list-inside">
-                <li><strong>Paso 1:</strong> Usa <strong>Serper</strong> para identificar a tus 3 competidores principales en la SERP.</li>
-                <li><strong>Paso 2:</strong> Usa <strong>ScraperAPI</strong> para visitar y extraer el contenido relevante de cada competidor.</li>
-                <li><strong>Paso 3:</strong> Usa <strong>Gemini</strong> para analizar todo el contexto y generar un informe estratégico con pilares de contenido, subtemas y oportunidades de nicho.</li>
-            </ul>
+            <p><strong>Esta es la herramienta más potente de la suite.</strong> Descubre oportunidades de contenido únicas.</p>
         </div>
         <div class="mt-6">
             <label for="content-strategy-keyword-input" class="block text-sm font-bold text-muted-foreground mb-2">Palabra Clave Principal del Nicho</label>
@@ -295,12 +280,11 @@ function renderContentStrategyView(appState) {
                 <ion-icon name="search-circle-outline" class="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"></ion-icon>
                 <input id="content-strategy-keyword-input" type="text"
                        class="w-full bg-background border border-border rounded-md pl-10 pr-4 py-2 focus:outline-none focus:ring-2 focus:ring-ring"
-                       placeholder="ej: guitarra eléctrica para principiantes"
-                       value="${appState.contentStrategyKeyword || ''}">
+                       placeholder="ej: guitarra eléctrica para principiantes">
             </div>
         </div>
         <div class="text-right mt-6">
-            <button data-module="contentStrategy" class="bg-primary hover:opacity-90 text-primary-foreground font-semibold px-6 py-2.5 rounded-md">Analizar Estrategia</button>
+            <button data-module="content-strategy" class="bg-primary hover:opacity-90 text-primary-foreground font-semibold px-6 py-2.5 rounded-md">Analizar Estrategia</button>
         </div>`;
 
     const resultsRenderer = (results) => `
@@ -342,21 +326,19 @@ function renderContentStrategyView(appState) {
             </div>
         </div>`;
 
-    const results = appState.moduleResults['contentStrategy'];
-    let resultsHTML = '';
-    if (appState.isLoading) {
-        resultsHTML = `<div class="results-card text-center py-12"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div><p class="mt-4 text-muted-foreground">Realizando análisis multi-API... Esto puede tardar hasta un minuto.</p></div>`;
-    } else if (results) {
-        resultsHTML = resultsRenderer(results);
-    } else {
-        resultsHTML = `<div class="text-center py-12"><p class="text-muted-foreground">Los resultados de tu análisis estratégico aparecerán aquí.</p></div>`;
-    }
-
     return `
         <div class="max-w-4xl mx-auto space-y-8">
             <div class="bg-card p-6 rounded-lg border border-border">${inputHTML}</div>
-            <div id="results-container">${resultsHTML}</div>
-        </div>`;
+            <div id="results-container">
+                ${appState.isLoading
+                    ? `<div class="results-card text-center py-12"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div><p class="mt-4 text-muted-foreground">Realizando análisis multi-API...</p></div>`
+                    : appState.moduleResults['content-strategy']
+                        ? resultsRenderer(appState.moduleResults['content-strategy'])
+                        : `<div class="text-center py-12"><p class="text-muted-foreground">Los resultados de tu análisis estratégico aparecerán aquí.</p></div>`
+                }
+            </div>
+        </div>
+    `;
 }
 
 // Exportamos todas las funciones para que app.js pueda usarlas
