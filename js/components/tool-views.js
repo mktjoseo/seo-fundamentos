@@ -97,7 +97,10 @@ function renderLinkingView(appState) {
             <button data-module="linking" class="bg-primary hover:opacity-90 text-primary-foreground font-semibold px-6 py-2.5 rounded-md">Calcular Profundidad</button>
         </div>`;
 
-    const resultsRenderer = (results) => {
+    const resultsRenderer = (data) => {
+        const results = data.results || [];
+        const crawlLog = data.crawlLog || [];
+
         const exportButtonHTML = `
             <div class="text-right mb-4">
                 <button id="export-linking-csv" class="text-sm bg-secondary hover:opacity-90 text-secondary-foreground font-semibold px-4 py-2 rounded-md flex items-center gap-2 inline-flex">
@@ -105,15 +108,29 @@ function renderLinkingView(appState) {
                     Exportar a CSV
                 </button>
             </div>`;
+        
+        const crawlLogHTML = `
+            <div class="results-card mt-6">
+                <h4 class="text-lg font-semibold text-foreground">Mapa de Rastreo Completo</h4>
+                <p class="text-sm text-muted-foreground mt-1">${crawlLog.length} URLs encontradas. Este es el camino que siguió el crawler.</p>
+                <div class="mt-4 space-y-2 max-h-60 overflow-y-auto pr-2">
+                    ${crawlLog.map(log => `
+                        <div class="grid grid-cols-3 items-center gap-4 bg-background p-2 rounded-md text-sm">
+                            <span class="font-mono text-foreground col-span-2 truncate" title="${log.url}">${log.url}</span>
+                            <span class="font-semibold text-right text-muted-foreground">${log.depth} clics</span>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>`;
 
         return `
-        <div class="results-card space-y-4">
+        <div class="results-card">
             ${results.length > 0 ? exportButtonHTML : ''}
             <div>
-                <h4 class="text-lg font-semibold text-foreground">Resultados de Profundidad</h4>
-                <p class="text-sm text-muted-foreground mt-1">Distancia en clics desde la página de inicio.</p>
+                <h4 class="text-lg font-semibold text-foreground">Resultados de Búsqueda</h4>
+                <p class="text-sm text-muted-foreground mt-1">Distancia en clics desde la página de inicio para tus URLs clave.</p>
             </div>
-            <div class="space-y-2">
+            <div class="space-y-2 mt-4">
                 ${results.map(r => `
                     <div class="grid grid-cols-3 items-center gap-4 bg-background p-3 rounded-md text-sm">
                         <span class="font-mono text-foreground col-span-2 truncate" title="${r.url}">${r.url}</span>
@@ -123,15 +140,17 @@ function renderLinkingView(appState) {
                     </div>
                 `).join('')}
             </div>
-        </div>`;
+        </div>
+        ${crawlLog.length > 0 ? crawlLogHTML : ''}
+        `;
     };
 
-    const results = appState.moduleResults['linking'];
+    const data = appState.moduleResults['linking'];
     let resultsHTML = '';
     if (appState.isLoading) {
         resultsHTML = `<div class="results-card text-center py-12"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div><p class="mt-4 text-muted-foreground">Rastreando el sitio... Esto puede tardar un momento.</p></div>`;
-    } else if (results) {
-        resultsHTML = resultsRenderer(results);
+    } else if (data) {
+        resultsHTML = resultsRenderer(data);
     }
 
     return `

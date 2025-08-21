@@ -1,9 +1,8 @@
-// api/linking.js (Versión Final Profesional, con filtros avanzados)
+// api/linking.js (Versión que devuelve el log de rastreo)
 
 const { createClient } = require('@supabase/supabase-js');
 const { JSDOM } = require('jsdom');
 
-// Expresión regular para ignorar enlaces a archivos comunes
 const FILE_EXTENSION_REGEX = /\.(pdf|jpg|jpeg|png|gif|svg|zip|rar|exe|mp3|mp4|avi)$/i;
 
 export default async function handler(request, response) {
@@ -48,14 +47,15 @@ export default async function handler(request, response) {
     const queue = [{ url: startUrl, depth: 0 }];
     const visited = new Set([startUrl]);
     const results = new Map();
+    const crawlLogData = [{ url: startUrl, depth: 0 }]; // Aquí guardaremos el log
+
     let pagesCrawled = 0;
-    // Reducimos el límite como medida de seguridad extra
     const CRAWL_LIMIT = 30;
 
     const normalizedKeyUrls = new Set(keyUrls.map(u => {
         let urlObj = new URL(u, startUrl);
         urlObj.hash = '';
-        urlObj.search = ''; // Ignoramos parámetros de consulta
+        urlObj.search = '';
         return urlObj.href.endsWith('/') ? urlObj.href.slice(0, -1) : urlObj.href;
     }));
 
@@ -63,11 +63,10 @@ export default async function handler(request, response) {
       const { url, depth } = queue.shift();
       pagesCrawled++;
       
-      console.log(`[CRAWL] Profundidad: ${depth}, Página: ${url}`);
-
-      if (normalizedKeyUrls.has(url)) {
-        results.set(url, depth);
-        normalizedKeyUrls.delete(url);
+      let normalizedUrlForCheck = url.endsWith('/') ? url.slice(0, -1) : url;
+      if (normalizedKeyUrls.has(normalizedUrlForCheck)) {
+        results.set(normalizedUrlForCheck, depth);
+        normalizedKeyUrls.delete(normalizedUrlForCheck);
       }
       
       if (normalizedKeyUrls.size === 0) break;
@@ -75,10 +74,7 @@ export default async function handler(request, response) {
       const scraperUrl = `http://api.scraperapi.com?api_key=${USER_SCRAPER_API_KEY}&url=${encodeURIComponent(url)}`;
       const fetchResponse = await fetch(scraperUrl);
 
-      if (!fetchResponse.ok) {
-        console.error(`[ERROR] Falló el scrapeo de ${url} con status ${fetchResponse.status}.`);
-        continue;
-      }
+      if (!fetchResponse.ok) continue;
       
       const html = await fetchResponse.text();
       const dom = new JSDOM(html);
@@ -90,23 +86,23 @@ export default async function handler(request, response) {
         const href = link.getAttribute('href');
         if (href) {
           try {
-            // ---- LÓGICA DE NORMALIZACIÓN MEJORADA ----
             if (!href || href.startsWith('#') || href.startsWith('mailto:') || href.startsWith('tel:')) continue;
             if (FILE_EXTENSION_REGEX.test(href)) continue;
 
             let nextUrlObj = new URL(href, url);
-            nextUrlObj.hash = ''; // Eliminamos el fragmento (#...)
-            nextUrlObj.search = ''; // Eliminamos parámetros de consulta (?...)
+            nextUrlObj.hash = '';
+            nextUrlObj.search = '';
             
             let normalizedUrl = nextUrlObj.href;
-            // Quitamos la barra final para evitar duplicados (ej: /blog y /blog/)
             if (normalizedUrl.endsWith('/')) {
                 normalizedUrl = normalizedUrl.slice(0, -1);
             }
 
             if (normalizedUrl.startsWith(startUrl) && !visited.has(normalizedUrl)) {
               visited.add(normalizedUrl);
-              queue.push({ url: normalizedUrl, depth: depth + 1 });
+              const newDepth = depth + 1;
+              queue.push({ url: normalizedUrl, depth: newDepth });
+              crawlLogData.push({ url: normalizedUrl, depth: newDepth });
             }
           } catch (_) {}
         }
@@ -130,7 +126,11 @@ export default async function handler(request, response) {
       };
     });
     
-    response.status(200).json(finalResults);
+    // Devolvemos un objeto con los resultados y el log completo del rastreo
+    response.status(200).json({
+        results: finalResults,
+        crawlLog: crawlLogData
+    });
 
   } catch (err) {
     response.status(401).json({ error: err.message });
