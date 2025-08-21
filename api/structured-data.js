@@ -1,7 +1,7 @@
-// api/structuredData.js (Versión para Vercel)
+// api/structured-data.js (Versión para Vercel con jsdom)
 
 const { createClient } = require('@supabase/supabase-js');
-const { DOMParser } = require('linkedom');
+const { JSDOM } = require('jsdom');
 
 export default async function handler(request, response) {
   // Manejo de CORS
@@ -48,8 +48,8 @@ export default async function handler(request, response) {
     if (!fetchResponse.ok) throw new Error('No se pudo obtener el HTML de la URL.');
     
     const html = await fetchResponse.text();
-    const { document } = new DOMParser().parseFromString(html, "text/html");
-    if (!document) throw new Error('No se pudo analizar el HTML.');
+    const dom = new JSDOM(html);
+    const { document } = dom.window;
 
     const pageTitle = document.querySelector('title')?.textContent || 'Página sin título';
     const schemaScript = document.querySelector('script[type="application/ld+json"]');

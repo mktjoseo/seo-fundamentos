@@ -1,7 +1,7 @@
-// api/contentStrategy.js (Versión para Vercel)
+// api/content-strategy.js (Versión para Vercel con jsdom)
 
 const { createClient } = require('@supabase/supabase-js');
-const { DOMParser } = require('linkedom');
+const { JSDOM } = require('jsdom');
 
 function getHostname(url_string) {
   try { return new URL(url_string).hostname; } catch (e) { return null; }
@@ -76,7 +76,8 @@ export default async function handler(request, response) {
         const scrapeResponse = await fetch(scraperUrl);
         if (scrapeResponse.ok) {
           const html = await scrapeResponse.text();
-          const { document } = new DOMParser().parseFromString(html, "text/html");
+          const dom = new JSDOM(html);
+          const { document } = dom.window;
           combinedText += `Título: ${document?.querySelector('h1')?.textContent || ''}\nContenido: ${document?.body?.innerText.slice(0, 1500) || ''}\n\n`;
         }
       }

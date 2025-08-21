@@ -1,7 +1,7 @@
-// api/linking.js (Versión para Vercel con depuración de HTML)
+// api/linking.js (Versión Final para Vercel usando jsdom)
 
 const { createClient } = require('@supabase/supabase-js');
-const { DOMParser } = require('linkedom');
+const { JSDOM } = require('jsdom');
 
 export default async function handler(request, response) {
   // Manejo de CORS
@@ -62,26 +62,18 @@ export default async function handler(request, response) {
       if (normalizedKeyUrls.size === 0) break;
 
       const scraperUrl = `http://api.scraperapi.com?api_key=${USER_SCRAPER_API_KEY}&url=${encodeURIComponent(url)}`;
-      console.log(`[DEBUG] Intentando scrapear: ${url}`);
       const fetchResponse = await fetch(scraperUrl);
-      console.log(`[DEBUG] Respuesta de ScraperAPI para ${url}: Status ${fetchResponse.status}`);
 
       if (!fetchResponse.ok) {
-        console.error(`[ERROR] Falló el scrapeo de ${url} con status ${fetchResponse.status}. Saltando a la siguiente URL.`);
+        console.error(`[ERROR] Falló el scrapeo de ${url} con status ${fetchResponse.status}.`);
         continue;
       }
       
       const html = await fetchResponse.text();
       
-      // --- NUEVO MICRÓFONO: ¿QUÉ HTML ESTAMOS RECIBIENDO? ---
-      console.log(`[DEBUG] Primeros 500 caracteres del HTML recibido: ${html.substring(0, 500)}`);
-      // --- FIN DEL MICRÓFONO ---
-
-      const { document } = new DOMParser().parseFromString(html, "text/html");
-      if (!document) {
-          console.error('[ERROR] El DOMParser no pudo analizar el HTML.');
-          continue;
-      }
+      // Usamos el nuevo parser JSDOM
+      const dom = new JSDOM(html);
+      const { document } = dom.window;
 
       const links = document.querySelectorAll('a');
       console.log(`[DEBUG] Se encontraron ${links.length} enlaces en ${url}.`);
