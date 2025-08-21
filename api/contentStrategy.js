@@ -1,28 +1,24 @@
-// netlify/functions/contentStrategy.js (VERSIÓN FINAL, COMPLETA Y VERIFICADA)
+// api/contentStrategy.js (Versión para Vercel)
 
 const { createClient } = require('@supabase/supabase-js');
-const { JSDOM } = require('jsdom');
-const USER_SCRAPER_API_KEY = process.env.SCRAPER_API_KEY;
-const USER_SERPER_API_KEY = process.env.SERPER_API_KEY;
-const USER_GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const { DOMParser } = require('linkedom');
 
-const getHostname = (urlString) => {
-  try { return new URL(urlString).hostname; } catch (e) { return null; }
-};
+function getHostname(url_string) {
+  try { return new URL(url_string).hostname; } catch (e) { return null; }
+}
 
-exports.handler = async function(event, context) {
-  if (event.httpMethod === 'OPTIONS') {
-    return {
-      statusCode: 200,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'authorization, content-type',
-      },
-    };
+export default async function handler(request, response) {
+  // Manejo de CORS
+  response.setHeader('Access-Control-Allow-Origin', '*');
+  response.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  response.setHeader('Access-Control-Allow-Headers', 'authorization, content-type');
+  if (request.method === 'OPTIONS') {
+    return response.status(200).end();
   }
 
   try {
-    const authHeader = event.headers.authorization;
+    // ---- LÓGICA DE AUTENTICACIÓN ----
+    const authHeader = request.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       throw new Error('Se requiere un token de autenticación válido.');
     }
@@ -33,70 +29,55 @@ exports.handler = async function(event, context) {
       process.env.SUPABASE_ANON_KEY,
       { global: { headers: { Authorization: `Bearer ${token}` } } }
     );
-
+    
     const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) {
-      throw new Error('Autenticación fallida.');
+    if (userError || !user) throw new Error('Autenticación fallida.');
+    
+    const { data: profile, error: profileError } = await supabase.from('profiles').select('scraper_api_key, serper_api_key, gemini_api_key').single();
+    if (profileError) throw new Error('No se pudo encontrar el perfil del usuario.');
+    if (!profile.scraper_api_key || !profile.serper_api_key || !profile.gemini_api_key) {
+        throw new Error('El usuario debe configurar sus claves de Scraper, Serper y Gemini.');
     }
+    
+    const USER_SCRAPER_API_KEY = profile.scraper_api_key;
+    const USER_SERPER_API_KEY = profile.serper_api_key;
+    const USER_GEMINI_API_KEY = profile.gemini_api_key;
+    // ---- FIN DE LA LÓGICA ----
 
-    if (!USER_SCRAPER_API_KEY || !USER_SERPER_API_KEY || !USER_GEMINI_API_KEY) {
-      throw new Error('Todas las claves de API deben estar configuradas en el servidor.');
-    }
-    
-    const { keyword } = JSON.parse(event.body);
-    if (!keyword) {
-      throw new Error('La palabra clave es requerida.');
-    }
-    
+    const { keyword } = request.body;
+    if (!keyword) throw new Error('La palabra clave es requerida.');
+
     const serperResponse = await fetch('https://google.serper.dev/search', {
       method: 'POST',
-      headers: {
-        'X-API-KEY': USER_SERPER_API_KEY,
-        'Content-Type': 'application/json'
-      },
+      headers: { 'X-API-KEY': USER_SERPER_API_KEY, 'Content-Type': 'application/json' },
       body: JSON.stringify({ q: keyword, num: 5 })
     });
-
-    if (!serperResponse.ok) {
-      throw new Error('Error al obtener competidores de Serper.');
-    }
+    if (!serperResponse.ok) throw new Error('Error al obtener competidores de Serper.');
     const serperData = await serperResponse.json();
     
     const competitorDomains = [...new Set(
       serperData.organic?.map(r => getHostname(r.link)).filter(Boolean)
     )].slice(0, 3);
     
-    if (competitorDomains.length === 0) {
-      throw new Error('No se encontraron competidores para analizar.');
-    }
+    if (competitorDomains.length === 0) throw new Error('No se encontraron competidores para analizar.');
 
     const competitorContentPromises = competitorDomains.map(async (domain) => {
       const siteSearchResponse = await fetch('https://google.serper.dev/search', {
         method: 'POST',
-        headers: {
-          'X-API-KEY': USER_SERPER_API_KEY,
-          'Content-Type': 'application/json'
-        },
+        headers: { 'X-API-KEY': USER_SERPER_API_KEY, 'Content-Type': 'application/json' },
         body: JSON.stringify({ q: `site:${domain} "${keyword}"`, num: 2 })
       });
       if (!siteSearchResponse.ok) return { domain, content: "" };
-
       const siteSearchData = await siteSearchResponse.json();
       const relevantUrls = siteSearchData.organic?.map(r => r.link) || [];
       let combinedText = "";
-
       for (const url of relevantUrls) {
         const scraperUrl = `http://api.scraperapi.com?api_key=${USER_SCRAPER_API_KEY}&url=${encodeURIComponent(url)}`;
         const scrapeResponse = await fetch(scraperUrl);
         if (scrapeResponse.ok) {
-          let html = await scrapeResponse.text();
-          
-          // Elimina todo el contenido de las etiquetas <style> y <script> para evitar errores de parseo.
-          html = html.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '').replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '');
-
-          const dom = new JSDOM(html);
-          const document = dom.window.document;
-          combinedText += `Título: ${document?.querySelector('h1')?.textContent || ''}\nContenido: ${document?.body?.textContent.slice(0, 1500) || ''}\n\n`;
+          const html = await scrapeResponse.text();
+          const { document } = new DOMParser().parseFromString(html, "text/html");
+          combinedText += `Título: ${document?.querySelector('h1')?.textContent || ''}\nContenido: ${document?.body?.innerText.slice(0, 1500) || ''}\n\n`;
         }
       }
       return { domain, content: combinedText };
@@ -109,31 +90,18 @@ exports.handler = async function(event, context) {
     
     const geminiResponse = await fetch(geminiUrl, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
     });
-
-    if (!geminiResponse.ok) {
-      throw new Error('Error al llamar a la API de Gemini para el análisis estratégico.');
-    }
+    if (!geminiResponse.ok) throw new Error('Error al llamar a la API de Gemini para el análisis estratégico.');
     
     const geminiData = await geminiResponse.json();
     const jsonResponseText = geminiData.candidates[0].content.parts[0].text.replace(/```json|```/g, '').trim();
     const analysisResult = JSON.parse(jsonResponseText);
     
-    return {
-      statusCode: 200,
-      headers: { 'Access-Control-Allow-Origin': '*' },
-      body: JSON.stringify(analysisResult),
-    };
+    response.status(200).json(analysisResult);
 
   } catch (err) {
-    return {
-      statusCode: 401,
-      headers: { 'Access-Control-Allow-Origin': '*' },
-      body: JSON.stringify({ error: err.message }),
-    };
+    response.status(401).json({ error: err.message });
   }
-};
+}

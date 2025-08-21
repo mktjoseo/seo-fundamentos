@@ -1,24 +1,20 @@
-// netlify/functions/structuredData.js (VERSIÓN FINAL Y COMPLETA)
+// api/structuredData.js (Versión para Vercel)
 
 const { createClient } = require('@supabase/supabase-js');
-const { JSDOM } = require('jsdom');
-const USER_SCRAPER_API_KEY = process.env.SCRAPER_API_KEY;
-const USER_SERPER_API_KEY = process.env.SERPER_API_KEY;
-const USER_GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const { DOMParser } = require('linkedom');
 
-exports.handler = async function(event, context) {
-  if (event.httpMethod === 'OPTIONS') {
-    return {
-      statusCode: 200,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'authorization, content-type',
-      },
-    };
+export default async function handler(request, response) {
+  // Manejo de CORS
+  response.setHeader('Access-Control-Allow-Origin', '*');
+  response.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  response.setHeader('Access-Control-Allow-Headers', 'authorization, content-type');
+  if (request.method === 'OPTIONS') {
+    return response.status(200).end();
   }
 
   try {
-    const authHeader = event.headers.authorization;
+    // ---- LÓGICA DE AUTENTICACIÓN ----
+    const authHeader = request.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       throw new Error('Se requiere un token de autenticación válido.');
     }
@@ -29,43 +25,40 @@ exports.handler = async function(event, context) {
       process.env.SUPABASE_ANON_KEY,
       { global: { headers: { Authorization: `Bearer ${token}` } } }
     );
-
+    
     const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) {
-      throw new Error('Autenticación fallida.');
+    if (userError || !user) throw new Error('Autenticación fallida.');
+    
+    const { data: profile, error: profileError } = await supabase.from('profiles').select('scraper_api_key, serper_api_key, gemini_api_key').single();
+    if (profileError) throw new Error('No se pudo encontrar el perfil del usuario.');
+    if (!profile.scraper_api_key || !profile.serper_api_key || !profile.gemini_api_key) {
+        throw new Error('El usuario debe configurar sus claves de Scraper, Serper y Gemini.');
     }
+    
+    const USER_SCRAPER_API_KEY = profile.scraper_api_key;
+    const USER_SERPER_API_KEY = profile.serper_api_key;
+    const USER_GEMINI_API_KEY = profile.gemini_api_key;
+    // ---- FIN DE LA LÓGICA ----
 
-    if (!USER_SCRAPER_API_KEY || !USER_SERPER_API_KEY || !USER_GEMINI_API_KEY) {
-      throw new Error('Todas las claves de API deben estar configuradas en el servidor.');
-    }
-    
-    const { url } = JSON.parse(event.body);
-    if (!url) {
-      throw new Error('La URL es requerida.');
-    }
-    
+    const { url } = request.body;
+    if (!url) throw new Error('La URL es requerida.');
+
     const scraperUrl = `http://api.scraperapi.com?api_key=${USER_SCRAPER_API_KEY}&url=${encodeURIComponent(url)}`;
-    const response = await fetch(scraperUrl);
-    if (!response.ok) {
-      throw new Error('No se pudo obtener el HTML de la URL.');
-    }
+    const fetchResponse = await fetch(scraperUrl);
+    if (!fetchResponse.ok) throw new Error('No se pudo obtener el HTML de la URL.');
     
-    const html = await response.text();
-    const dom = new JSDOM(html);
-    const document = dom.window.document;
+    const html = await fetchResponse.text();
+    const { document } = new DOMParser().parseFromString(html, "text/html");
+    if (!document) throw new Error('No se pudo analizar el HTML.');
 
     const pageTitle = document.querySelector('title')?.textContent || 'Página sin título';
     const schemaScript = document.querySelector('script[type="application/ld+json"]');
     
     if (!schemaScript) {
-      return {
-        statusCode: 200,
-        headers: { 'Access-Control-Allow-Origin': '*' },
-        body: JSON.stringify({
-          validation: { status: 'No Encontrado', issues: [{ type: 'Error', message: 'No se encontró ningún script de datos estructurados (JSON-LD) en esta página.' }] },
-          competitors: []
-        }),
-      };
+      return response.status(200).json({
+        validation: { status: 'No Encontrado', issues: [{ type: 'Error', message: 'No se encontró ningún script de datos estructurados (JSON-LD) en esta página.' }] },
+        competitors: []
+      });
     }
 
     const schemaContent = schemaScript.textContent;
@@ -109,20 +102,10 @@ exports.handler = async function(event, context) {
       validation: validationResult,
       competitors: competitorSchemas.map(schema => ({ type: schema }))
     };
-    
-    // NOTA: Esta herramienta no depende de un proyecto, por lo que no guardamos el resultado.
-    
-    return {
-      statusCode: 200,
-      headers: { 'Access-Control-Allow-Origin': '*' },
-      body: JSON.stringify(finalResult),
-    };
+
+    response.status(200).json(finalResult);
 
   } catch (err) {
-    return {
-      statusCode: 401,
-      headers: { 'Access-Control-Allow-Origin': '*' },
-      body: JSON.stringify({ error: err.message }),
-    };
+    response.status(401).json({ error: err.message });
   }
-};
+}

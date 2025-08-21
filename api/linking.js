@@ -1,22 +1,20 @@
-// netlify/functions/linking.js (VERSIÓN FINAL Y COMPLETA)
+// api/linking.js (Versión para Vercel)
 
 const { createClient } = require('@supabase/supabase-js');
-const { JSDOM } = require('jsdom');
-const USER_SCRAPER_API_KEY = process.env.SCRAPER_API_KEY;
+const { DOMParser } = require('linkedom');
 
-exports.handler = async function(event, context) {
-  if (event.httpMethod === 'OPTIONS') {
-    return {
-      statusCode: 200,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'authorization, content-type',
-      },
-    };
+export default async function handler(request, response) {
+  // Manejo de CORS (necesario para Vercel)
+  response.setHeader('Access-Control-Allow-Origin', '*');
+  response.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  response.setHeader('Access-Control-Allow-Headers', 'authorization, content-type');
+  if (request.method === 'OPTIONS') {
+    return response.status(200).end();
   }
 
   try {
-    const authHeader = event.headers.authorization;
+    // ---- LÓGICA DE AUTENTICACIÓN ----
+    const authHeader = request.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       throw new Error('Se requiere un token de autenticación válido.');
     }
@@ -29,34 +27,33 @@ exports.handler = async function(event, context) {
     );
 
     const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) {
-      throw new Error('Autenticación fallida.');
-    }
-
-    if (!USER_SCRAPER_API_KEY) {
-      throw new Error('La ScraperAPI Key no está configurada en el servidor.');
-    }
+    if (userError || !user) throw new Error('Autenticación fallida.');
     
-    const { startUrl, keyUrls, projectId } = JSON.parse(event.body);
+    const { data: profile, error: profileError } = await supabase.from('profiles').select('scraper_api_key').single();
+    if (profileError) throw new Error('No se pudo encontrar el perfil del usuario.');
+    if (!profile.scraper_api_key) throw new Error('El usuario no ha configurado su ScraperAPI Key.');
+    
+    const USER_SCRAPER_API_KEY = profile.scraper_api_key;
+    // ---- FIN DE LA LÓGICA ----
+
+    const { startUrl, keyUrls } = request.body;
     if (!startUrl || !keyUrls || !keyUrls.length) {
       throw new Error('La URL de inicio y la lista de URLs clave son requeridas.');
     }
-    if (!projectId) {
-      throw new Error('No se ha proporcionado un ID de proyecto.');
-    }
 
+    // --- Lógica del Crawler ---
     const queue = [{ url: startUrl, depth: 0 }];
     const visited = new Set([startUrl]);
     const results = new Map();
     let pagesCrawled = 0;
-    const CRAWL_LIMIT = 20;
+    const CRAWL_LIMIT = 50;
 
     const normalizedKeyUrls = new Set(keyUrls.map(u => new URL(u, startUrl).href));
 
     while (queue.length > 0 && pagesCrawled < CRAWL_LIMIT) {
       const { url, depth } = queue.shift();
       pagesCrawled++;
-
+      
       if (normalizedKeyUrls.has(url)) {
         results.set(url, depth);
         normalizedKeyUrls.delete(url);
@@ -65,18 +62,21 @@ exports.handler = async function(event, context) {
       if (normalizedKeyUrls.size === 0) break;
 
       const scraperUrl = `http://api.scraperapi.com?api_key=${USER_SCRAPER_API_KEY}&url=${encodeURIComponent(url)}`;
-      const response = await fetch(scraperUrl);
+      console.log(`[DEBUG] Intentando scrapear: ${url}`);
+      const fetchResponse = await fetch(scraperUrl);
+      console.log(`[DEBUG] Respuesta de ScraperAPI para ${url}: Status ${fetchResponse.status}`);
 
-      if (!response.ok) {
-        console.error(`[ERROR] Falló el scrapeo de ${url} con status ${response.status}.`);
-        continue; 
+      if (!fetchResponse.ok) {
+        console.error(`[ERROR] Falló el scrapeo de ${url} con status ${fetchResponse.status}. Saltando a la siguiente URL.`);
+        continue;
       }
       
-      const html = await response.text();
-      const dom = new JSDOM(html);
-      const document = dom.window.document;
+      const html = await fetchResponse.text();
+      const { document } = new DOMParser().parseFromString(html, "text/html");
+      if (!document) continue;
 
       const links = document.querySelectorAll('a');
+      console.log(`[DEBUG] Se encontraron ${links.length} enlaces en ${url}.`);
 
       for (const link of links) {
         const href = link.getAttribute('href');
@@ -101,28 +101,10 @@ exports.handler = async function(event, context) {
         isProblematic: typeof depth === 'number' && depth > 3
       };
     });
-
-    const supabaseAdmin = createClient(
-      process.env.SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_KEY
-    );
-    await supabaseAdmin.from('analysis_results').insert({
-      project_id: projectId,
-      module_key: 'linking',
-      results_data: finalResults
-    });
-
-    return {
-      statusCode: 200,
-      headers: { 'Access-Control-Allow-Origin': '*' },
-      body: JSON.stringify(finalResults),
-    };
+    
+    response.status(200).json(finalResults);
 
   } catch (err) {
-    return {
-      statusCode: 401,
-      headers: { 'Access-Control-Allow-Origin': '*' },
-      body: JSON.stringify({ error: err.message }),
-    };
+    response.status(401).json({ error: err.message });
   }
-};
+}

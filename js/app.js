@@ -254,7 +254,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 setState({ isLoading: true });
                 try {
-                    const functionUrl = `/.netlify/functions/${moduleKey}`;
+                    const functionUrl = `/api/${moduleKey}`;
                     const response = await fetch(functionUrl, {
                         method: 'POST',
                         headers: {
