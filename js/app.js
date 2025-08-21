@@ -256,18 +256,25 @@ document.addEventListener('DOMContentLoaded', () => {
                     setState({ isLoading: false });
                 }
             } else if (exportLinkingBtn) {
-                const results = appState.moduleResults['linking'];
-                if (!results || results.length === 0) return;
-                let csvContent = "data:text/csv;charset=utf-8,";
-                csvContent += "URL,Profundidad (clics)\n";
-                results.forEach(row => { csvContent += `${row.url},${row.depth}\n`; });
-                const encodedUri = encodeURI(csvContent);
-                const link = document.createElement("a");
-                link.setAttribute("href", encodedUri);
-                link.setAttribute("download", "reporte_profundidad_enlazado.csv");
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
+            // 1. Leemos el "paquete" de datos completo
+            const data = appState.moduleResults['linking'];
+            // 2. Nos aseguramos de que el log de rastreo exista
+            if (!data || !data.crawlLog || data.crawlLog.length === 0) return;
+            // 3. Creamos el CSV usando la lista completa del "Mapa de Rastreo"
+            let csvContent = "data:text/csv;charset=utf-8,";
+            csvContent += "URL,Profundidad (clics)\n"; // Encabezados
+            data.crawlLog.forEach(row => {
+                csvContent += `${row.url},${row.depth}\n`;
+            });
+
+            // La lógica para descargar el archivo sigue siendo la misma
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", "mapa_de_rastreo_completo.csv"); // Nombre de archivo
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
             } else if (copyQuestionsBtn) {
                 const results = appState.moduleResults['structure'];
                 if (results && results.unansweredQuestions.length > 0) {
