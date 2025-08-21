@@ -1,13 +1,13 @@
-// api/linking.js (Versión para Vercel)
+// api/linking.js (Versión para Vercel con depuración de HTML)
 
 const { createClient } = require('@supabase/supabase-js');
 const { DOMParser } = require('linkedom');
 
 export default async function handler(request, response) {
-  // Manejo de CORS (necesario para Vercel)
+  // Manejo de CORS
   response.setHeader('Access-Control-Allow-Origin', '*');
   response.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  response.setHeader('Access-Control-Allow-Headers', 'authorization, content-type');
+  response.setHeader('Access-control-allow-headers', 'authorization, content-type');
   if (request.method === 'OPTIONS') {
     return response.status(200).end();
   }
@@ -72,8 +72,16 @@ export default async function handler(request, response) {
       }
       
       const html = await fetchResponse.text();
+      
+      // --- NUEVO MICRÓFONO: ¿QUÉ HTML ESTAMOS RECIBIENDO? ---
+      console.log(`[DEBUG] Primeros 500 caracteres del HTML recibido: ${html.substring(0, 500)}`);
+      // --- FIN DEL MICRÓFONO ---
+
       const { document } = new DOMParser().parseFromString(html, "text/html");
-      if (!document) continue;
+      if (!document) {
+          console.error('[ERROR] El DOMParser no pudo analizar el HTML.');
+          continue;
+      }
 
       const links = document.querySelectorAll('a');
       console.log(`[DEBUG] Se encontraron ${links.length} enlaces en ${url}.`);
