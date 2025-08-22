@@ -1,4 +1,4 @@
-// api/structure.js (Versión para Vercel)
+// api/structure.js (Versión para Vercel con guardado en DB)
 
 const { createClient } = require('@supabase/supabase-js');
 
@@ -38,9 +38,12 @@ export default async function handler(request, response) {
     const USER_GEMINI_API_KEY = profile.gemini_api_key;
     // ---- FIN DE LA LÓGICA ----
 
-    const { keyword, articleText } = request.body;
-    if (!keyword || !articleText) throw new Error('La palabra clave y el texto del artículo son requeridos.');
+    const { keyword, articleText, projectId } = request.body;
+    if (!keyword || !articleText || !projectId) {
+      throw new Error('Faltan datos requeridos (keyword, articleText, o projectId).');
+    }
 
+    // --- Lógica del Análisis ---
     const serperResponse = await fetch('https://google.serper.dev/search', {
       method: 'POST',
       headers: { 'X-API-KEY': USER_SERPER_API_KEY, 'Content-Type': 'application/json' },
@@ -59,9 +62,24 @@ export default async function handler(request, response) {
       body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
     });
     if (!geminiResponse.ok) throw new Error('Error al llamar a la API de Gemini.');
+    
     const geminiData = await geminiResponse.json();
     const jsonResponseText = geminiData.candidates[0].content.parts[0].text.replace(/```json|```/g, '').trim();
     const analysisResult = JSON.parse(jsonResponseText);
+
+    // ---- NUEVO: Guardar en la Base de Datos ----
+    const { error: insertError } = await supabase
+      .from('analisis_resultados')
+      .insert({
+        project_id: projectId,
+        module_type: 'structure', // Clave que identifica a esta herramienta
+        results_data: analysisResult 
+      });
+
+    if (insertError) {
+      console.error("Error al guardar el resultado de 'structure':", insertError.message);
+    }
+    // ---- FIN DEL BLOQUE DE GUARDADO ----
 
     response.status(200).json(analysisResult);
 

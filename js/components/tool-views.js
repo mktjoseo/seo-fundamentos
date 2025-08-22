@@ -78,7 +78,7 @@ function renderStructureView(appState) {
 
 function renderLinkingView(appState) {
     const currentProject = appState.projects.find(p => p.id === appState.currentProjectId);
-    const startUrl = currentProject ? `https://${currentProject.url}` : '';
+    const startUrl = currentProject ? (currentProject.url.startsWith('http') ? currentProject.url : `https://${currentProject.url}`) : '';
 
     const inputHTML = `
         <h3 class="text-2xl font-bold text-foreground">Análisis de Profundidad de Enlazado</h3>
