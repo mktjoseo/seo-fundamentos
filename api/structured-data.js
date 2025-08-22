@@ -1,4 +1,4 @@
-// api/structured-data.js (Versión para Vercel con jsdom)
+// api/structured-data.js (Versión para Vercel con guardado en DB)
 
 const { createClient } = require('@supabase/supabase-js');
 const { JSDOM } = require('jsdom');
@@ -40,7 +40,7 @@ export default async function handler(request, response) {
     const USER_GEMINI_API_KEY = profile.gemini_api_key;
     // ---- FIN DE LA LÓGICA ----
 
-    const { url } = request.body;
+    const { url, projectId } = request.body;
     if (!url) throw new Error('La URL es requerida.');
 
     const scraperUrl = `http://api.scraperapi.com?api_key=${USER_SCRAPER_API_KEY}&url=${encodeURIComponent(url)}`;
@@ -55,10 +55,20 @@ export default async function handler(request, response) {
     const schemaScript = document.querySelector('script[type="application/ld+json"]');
     
     if (!schemaScript) {
-      return response.status(200).json({
+      // Aunque no haya schema, es un resultado válido que podemos guardar
+      const noSchemaResult = {
         validation: { status: 'No Encontrado', issues: [{ type: 'Error', message: 'No se encontró ningún script de datos estructurados (JSON-LD) en esta página.' }] },
         competitors: []
-      });
+      };
+
+      if (projectId) {
+        await supabase.from('analisis_resultados').insert({
+            project_id: projectId,
+            module_type: 'structured-data',
+            results_data: noSchemaResult
+        });
+      }
+      return response.status(200).json(noSchemaResult);
     }
 
     const schemaContent = schemaScript.textContent;
@@ -102,6 +112,22 @@ export default async function handler(request, response) {
       validation: validationResult,
       competitors: competitorSchemas.map(schema => ({ type: schema }))
     };
+
+    // ---- NUEVO: Guardar en la Base de Datos ----
+    // Esta herramienta puede funcionar sin proyecto, pero solo guardará si hay uno.
+    if (projectId) {
+        const { error: insertError } = await supabase
+          .from('analisis_resultados')
+          .insert({
+            project_id: projectId,
+            module_type: 'structured-data',
+            results_data: finalResult
+          });
+
+        if (insertError) {
+          console.error("Error al guardar el resultado de 'structured-data':", insertError.message);
+        }
+    }
 
     response.status(200).json(finalResult);
 

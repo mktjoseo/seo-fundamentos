@@ -1,4 +1,4 @@
-// api/zombieUrls.js (Versión para Vercel)
+// api/zombie-urls.js (Versión para Vercel con guardado en DB)
 
 const { createClient } = require('@supabase/supabase-js');
 
@@ -37,8 +37,10 @@ export default async function handler(request, response) {
     const USER_SERPER_API_KEY = profile.serper_api_key;
     // ---- FIN DE LA LÓGICA ----
 
-    const { domain } = request.body;
-    if (!domain) throw new Error('El dominio es requerido.');
+    const { domain, projectId } = request.body;
+    if (!domain || !projectId) {
+        throw new Error('Faltan datos requeridos (domain o projectId).');
+    }
 
     const sitemapUrl = `https://${domain}/sitemap.xml`;
     const sitemapResponse = await fetch(sitemapUrl);
@@ -67,6 +69,20 @@ export default async function handler(request, response) {
     const results = await Promise.all(checkPromises);
     const zombieUrls = results.filter(result => result !== null);
     
+    // ---- NUEVO: Guardar en la Base de Datos ----
+    const { error: insertError } = await supabase
+      .from('analisis_resultados')
+      .insert({
+        project_id: projectId,
+        module_type: 'zombie-urls',
+        results_data: { zombies: zombieUrls } // Guardamos el array dentro de un objeto
+      });
+
+    if (insertError) {
+      console.error("Error al guardar el resultado de 'zombie-urls':", insertError.message);
+    }
+    // ---- FIN DEL BLOQUE DE GUARDADO ----
+
     response.status(200).json(zombieUrls);
 
   } catch (err) {
