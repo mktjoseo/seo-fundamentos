@@ -308,7 +308,13 @@ function renderContentStrategyView(appState) {
 
     const resultsRenderer = (results) => `
         <div>
-            <h4 class="text-xl font-bold text-foreground mb-6">Análisis Estratégico de Competidores</h4>
+            <div class="flex justify-between items-center mb-6">
+                <h4 class="text-xl font-bold text-foreground">Análisis Estratégico de Competidores</h4>
+                <button id="export-strategy-btn" class="text-sm bg-secondary hover:opacity-90 text-secondary-foreground font-semibold px-4 py-2 rounded-md flex items-center gap-2 inline-flex">
+                    <ion-icon name="download-outline"></ion-icon>
+                    Exportar
+                </button>
+            </div>
             <div class="space-y-6">
             ${results.competitors.map(c => `
                 <div class="results-card strategy-card overflow-hidden">

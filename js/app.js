@@ -178,6 +178,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });      
 
         mainContent.addEventListener('click', async (e) => {
+            // Definimos todos los posibles botones que se pueden clickear
             const actionButton = e.target.closest('button[data-project-action-id]');
             const editButton = e.target.closest('button[data-edit-project-id]');
             const cancelButton = e.target.closest('button[data-cancel-edit-id]');
@@ -186,7 +187,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const moduleButton = e.target.closest('button[data-module]');
             const exportLinkingBtn = e.target.closest('#export-linking-csv');
             const copyQuestionsBtn = e.target.closest('#copy-questions-btn');
+            const exportStrategyBtn = e.target.closest('#export-strategy-btn');
 
+            // Creamos una única cadena de decisión para manejar el clic
             if (actionButton) {
                 const projectId = parseInt(actionButton.dataset.projectActionId);
                 setState({ projectActionsOpen: { [projectId]: !appState.projectActionsOpen[projectId] } });
@@ -207,21 +210,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 let payload = {};
                 const currentProject = appState.projects.find(p => p.id === appState.currentProjectId);
 
+                // Lógica para construir el payload (sin cambios)
                 if (moduleKey === 'content-strategy' || moduleKey === 'structured-data') {
                     if (moduleKey === 'content-strategy') {
                         const keyword = document.getElementById('content-strategy-keyword-input')?.value;
                         if (!keyword) return alert('Por favor, introduce una palabra clave.');
-                        payload = { keyword };
+                        payload = { keyword, projectId: currentProject?.id }; // Pasamos el ID si existe
                     } else if (moduleKey === 'structured-data') {
                         const url = document.getElementById('schema-url-input')?.value;
                         if (!url || !url.startsWith('http')) return alert('Por favor, introduce una URL válida.');
-                        payload = { url };
+                        payload = { url, projectId: currentProject?.id }; // Pasamos el ID si existe
                     }
                 } else {
                     if (!currentProject) return alert("Selecciona un proyecto para usar esta herramienta.");
-                    
                     if (moduleKey === 'linking') {
-                        const startUrl = `https://${currentProject.url}`;
+                        const startUrl = currentProject.url.startsWith('http') ? currentProject.url : `https://${currentProject.url}`;
                         const keyUrlsText = document.getElementById('linking-key-urls-input')?.value;
                         if (!keyUrlsText) return alert("Añade URLs clave.");
                         const keyUrls = keyUrlsText.split('\n').filter(url => url.trim() !== '');
@@ -256,25 +259,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     setState({ isLoading: false });
                 }
             } else if (exportLinkingBtn) {
-            // 1. Leemos el "paquete" de datos completo
-            const data = appState.moduleResults['linking'];
-            // 2. Nos aseguramos de que el log de rastreo exista
-            if (!data || !data.crawlLog || data.crawlLog.length === 0) return;
-            // 3. Creamos el CSV usando la lista completa del "Mapa de Rastreo"
-            let csvContent = "data:text/csv;charset=utf-8,";
-            csvContent += "URL,Profundidad (clics)\n"; // Encabezados
-            data.crawlLog.forEach(row => {
-                csvContent += `${row.url},${row.depth}\n`;
-            });
-
-            // La lógica para descargar el archivo sigue siendo la misma
-            const encodedUri = encodeURI(csvContent);
-            const link = document.createElement("a");
-            link.setAttribute("href", encodedUri);
-            link.setAttribute("download", "mapa_de_rastreo_completo.csv"); // Nombre de archivo
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+                const data = appState.moduleResults['linking'];
+                if (!data || !data.crawlLog || data.crawlLog.length === 0) return;
+                let csvContent = "data:text/csv;charset=utf-8,";
+                csvContent += "URL,Profundidad (clics)\n";
+                data.crawlLog.forEach(row => { csvContent += `${row.url},${row.depth}\n`; });
+                const encodedUri = encodeURI(csvContent);
+                const link = document.createElement("a");
+                link.setAttribute("href", encodedUri);
+                link.setAttribute("download", "mapa_de_rastreo_completo.csv");
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
             } else if (copyQuestionsBtn) {
                 const results = appState.moduleResults['structure'];
                 if (results && results.unansweredQuestions.length > 0) {
@@ -284,6 +280,27 @@ document.addEventListener('DOMContentLoaded', () => {
                         setTimeout(() => { copyQuestionsBtn.innerHTML = '<ion-icon name="copy-outline"></ion-icon> Copiar'; }, 2000);
                     }).catch(err => { alert('Error al copiar el texto.'); });
                 }
+            } else if (exportStrategyBtn) {
+                const data = appState.moduleResults['content-strategy'];
+                if (!data || !data.competitors) return;
+                let textContent = `Estrategia de Contenido para la Keyword: ${document.getElementById('content-strategy-keyword-input')?.value || 'N/A'}\n\n`;
+                data.competitors.forEach(c => {
+                    textContent += `========================================\n`;
+                    textContent += `Dominio: ${c.domain}\n`;
+                    textContent += `----------------------------------------\n`;
+                    textContent += `Pilar de Contenido Principal:\n- ${c.contentPillar}\n\n`;
+                    textContent += `Subtemas Cubiertos:\n${c.subTopics.map(t => `- ${t}`).join('\n')}\n\n`;
+                    textContent += `Oportunidad de Nicho:\n- ${c.opportunity}\n`;
+                    textContent += `========================================\n\n`;
+                });
+                const blob = new Blob([textContent], { type: 'text/plain;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement("a");
+                link.setAttribute("href", url);
+                link.setAttribute("download", "estrategia_de_contenido.txt");
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
             }
         });
 

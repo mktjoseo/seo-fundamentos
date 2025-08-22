@@ -1,4 +1,4 @@
-// api/content-strategy.js (Versión Final para Vercel, blindada contra HTML vacío)
+// api/content-strategy.js (Versión Final con guardado en DB)
 
 const { createClient } = require('@supabase/supabase-js');
 const { JSDOM } = require('jsdom');
@@ -44,8 +44,11 @@ export default async function handler(request, response) {
     const USER_GEMINI_API_KEY = profile.gemini_api_key;
     // ---- FIN DE LA LÓGICA ----
 
-    const { keyword } = request.body;
+    const { keyword, projectId } = request.body; // Recibimos el projectId
     if (!keyword) throw new Error('La palabra clave es requerida.');
+    // projectId no es estrictamente necesario para esta función, pero lo usaremos para guardar
+    if (!projectId) console.warn("Falta el projectId en el payload. El resultado no se guardará.");
+
 
     const serperResponse = await fetch('https://google.serper.dev/search', {
       method: 'POST',
@@ -59,7 +62,7 @@ export default async function handler(request, response) {
     const serperData = await serperResponse.json();
 
     if (!serperData.organic) {
-        throw new Error('La respuesta de Serper no contiene resultados de búsqueda. Revisa tu clave o los términos de búsqueda.');
+        throw new Error('La respuesta de Serper no contiene resultados de búsqueda.');
     }
     
     const competitorDomains = [...new Set(
@@ -84,11 +87,8 @@ export default async function handler(request, response) {
         const scrapeResponse = await fetch(scraperUrl);
         if (scrapeResponse.ok) {
           const html = await scrapeResponse.text();
-          
           const dom = new JSDOM(html, { resources: "usable" });
           const { document } = dom.window;
-          
-          // ---- LÍNEA CORREGIDA Y BLINDADA ----
           const bodyText = document?.body?.innerText || '';
           combinedText += `Título: ${document?.querySelector('h1')?.textContent || ''}\nContenido: ${bodyText.slice(0, 1500)}\n\n`;
         }
@@ -112,10 +112,25 @@ export default async function handler(request, response) {
     const jsonResponseText = geminiData.candidates[0].content.parts[0].text.replace(/```json|```/g, '').trim();
     const analysisResult = JSON.parse(jsonResponseText);
     
+    // ---- NUEVO: Guardar en la Base de Datos ----
+    // Esta herramienta puede funcionar sin proyecto, pero solo guardará si hay uno.
+    if (projectId) {
+        const { error: insertError } = await supabase
+          .from('analisis_resultados')
+          .insert({
+            project_id: projectId,
+            module_type: 'content-strategy',
+            results_data: analysisResult 
+          });
+
+        if (insertError) {
+          console.error("Error al guardar el resultado de 'content-strategy':", insertError.message);
+        }
+    }
+    
     response.status(200).json(analysisResult);
 
   } catch (err) {
-    // Devolvemos un 500 para errores internos del servidor
     response.status(500).json({ error: err.message });
   }
 }
