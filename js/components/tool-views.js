@@ -160,6 +160,8 @@ function renderLinkingView(appState) {
         </div>`;
 }
 
+// renderZombiesView actualizada con lógica visual
+
 function renderZombiesView(appState) {
     const currentProject = appState.projects.find(p => p.id === appState.currentProjectId);
 
@@ -177,53 +179,75 @@ function renderZombiesView(appState) {
     }
 
     const inputHTML = `
-        <h3 class="text-lg font-semibold">Análisis de URLs Zombie</h3>
-        <p class="text-sm text-muted-foreground mt-1">Encuentra páginas con problemas de indexación o de bajo valor.</p>
-        <div class="mt-4 space-y-4">
+        <h3 class="text-2xl font-bold text-foreground">Análisis de URLs Zombie</h3>
+        <p class="text-muted-foreground mt-2">Encuentra páginas con problemas de indexación o de bajo valor.</p>
+        <div class="mt-6 space-y-4">
             <div>
-                <label class="block text-sm font-medium text-muted-foreground mb-1">Dominio a Analizar</label>
+                <label class="block text-sm font-bold text-muted-foreground mb-2">Dominio a Analizar</label>
                 <input type="text" class="w-full bg-muted border border-border rounded-md px-3 py-2" value="${currentProject.url}" disabled>
             </div>
         </div>
-        <div class="text-right mt-4">
-            <button data-module="zombie-urls" class="bg-primary hover:opacity-90 text-primary-foreground font-semibold px-6 py-2 rounded-md">Buscar URLs Zombie</button>
+        <div class="text-right mt-6">
+            <button data-module="zombie-urls" class="bg-primary hover:opacity-90 text-primary-foreground font-semibold px-6 py-2.5 rounded-md">Buscar URLs Zombie</button>
         </div>`;
     
-    const resultsRenderer = (results) => `
+    const resultsRenderer = (results) => {
+        const warnings = results.filter(r => r.type === 'warning');
+        const infos = results.filter(r => r.type === 'info');
+
+        // Función para renderizar una fila de resultado
+        const renderRow = (r) => {
+            const isWarning = r.type === 'warning';
+            const icon = isWarning ? 'warning-outline' : 'checkmark-circle-outline';
+            const textColor = isWarning ? 'text-destructive' : 'text-secondary';
+            
+            return `
+            <div class="grid grid-cols-1 md:grid-cols-3 items-center gap-4 bg-background p-3 rounded-md">
+                <span class="font-mono text-sm text-foreground col-span-1">${r.url}</span>
+                <div class="${textColor} font-semibold text-sm flex items-center gap-2"><ion-icon name="${icon}"></ion-icon>${r.status}</div>
+                <div class="text-muted-foreground text-sm">${r.suggestion}</div>
+            </div>`;
+        };
+        
+        return `
         <div class="bg-card p-6 rounded-lg border border-border space-y-6">
             <div>
                 <h4 class="text-lg font-semibold">Diagnóstico de Indexación</h4>
-                <p class="text-sm text-muted-foreground mt-1">Se encontraron <span class="font-bold text-destructive">${results.length} URLs</span> que podrían no estar aportando valor a tu SEO al no estar indexadas en Google.</p>
+                <p class="text-sm text-muted-foreground mt-1">Se encontraron <span class="font-bold text-destructive">${warnings.length} URLs</span> que podrían ser un problema y <span class="font-bold text-secondary">${infos.length} archivos</span> correctamente no indexados.</p>
             </div>
+            ${warnings.length > 0 ? `
              <div class="bg-muted p-4 rounded-lg">
-                <h5 class="font-semibold text-foreground mb-2">Acciones Recomendadas</h5>
-                <div class="space-y-3">
-                ${results.map(r => `
-                    <div class="grid grid-cols-1 md:grid-cols-3 items-center gap-4 bg-background p-3 rounded-md">
-                        <span class="font-mono text-sm text-foreground col-span-1">${r.url}</span>
-                        <div class="text-destructive font-semibold text-sm flex items-center gap-2"><ion-icon name="eye-off-outline"></ion-icon>${r.status}</div>
-                        <div class="text-muted-foreground text-sm">${r.suggestion}</div>
-                    </div>
-                `).join('')}
-                </div>
-            </div>
+                <h5 class="font-semibold text-foreground mb-2 text-destructive flex items-center gap-2"><ion-icon name="warning-outline"></ion-icon>Posibles Problemas a Revisar</h5>
+                <div class="space-y-3 mt-3">${warnings.map(renderRow).join('')}</div>
+            </div>` : ''}
+            ${infos.length > 0 ? `
+            <div class="bg-muted p-4 rounded-lg">
+                <h5 class="font-semibold text-foreground mb-2 text-secondary flex items-center gap-2"><ion-icon name="checkmark-done-outline"></ion-icon>Archivos de Sistema (Correcto)</h5>
+                <div class="space-y-3 mt-3">${infos.map(renderRow).join('')}</div>
+            </div>` : ''}
         </div>
     `;
+    }
+
+    // El resultado de esta función es un array, no un objeto
+    const results = appState.moduleResults['zombie-urls'];
+    let resultsHTML = '';
+    if (appState.isLoading) {
+        resultsHTML = `<div class="results-card flex items-center justify-center h-48"><div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div></div>`
+    } else if (results) {
+        resultsHTML = resultsRenderer(results);
+    } else {
+        resultsHTML = `<div class="text-center py-12"><p class="text-muted-foreground">Los resultados de tu análisis aparecerán aquí.</p></div>`;
+    }
 
     return `
         <div class="max-w-4xl mx-auto space-y-8">
             <div class="bg-card p-6 rounded-lg border border-border">${inputHTML}</div>
-            <div id="results-container">
-                ${appState.isLoading
-                    ? `<div class="results-card flex items-center justify-center h-48"><div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div></div>`
-                    : appState.moduleResults['zombie-urls']
-                        ? resultsRenderer(appState.moduleResults['zombie-urls'])
-                        : `<div class="text-center py-12"><p class="text-muted-foreground">Los resultados de tu análisis aparecerán aquí.</p></div>`
-                }
-            </div>
+            <div id="results-container">${resultsHTML}</div>
         </div>
     `;
 }
+
 
 function renderSchemaView(appState) {
     const inputHTML = `

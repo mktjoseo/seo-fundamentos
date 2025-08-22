@@ -1,4 +1,4 @@
-// api/zombie-urls.js (Versión para Vercel con guardado en DB)
+// api/zombie-urls.js (Versión Inteligente que diferencia sitemaps)
 
 const { createClient } = require('@supabase/supabase-js');
 
@@ -60,8 +60,23 @@ export default async function handler(request, response) {
         body: JSON.stringify({ q: serperQuery })
       });
       const results = await fetchResponse.json();
+
       if (results.organic && results.organic.length === 0) {
-        return { url, status: 'No Indexada', suggestion: 'Verificar en Google Search Console.' };
+        // --- LÓGICA DE INTELIGENCIA AÑADIDA ---
+        if (url.endsWith('.xml')) {
+            return { 
+                url, 
+                status: 'Sitemap (Correcto)', 
+                suggestion: 'Este tipo de archivo no debe ser indexado.',
+                type: 'info' // Tipo informativo
+            };
+        }
+        return { 
+            url, 
+            status: 'No Indexada', 
+            suggestion: 'Verificar en Google Search Console si debería estar indexada.',
+            type: 'warning' // Tipo advertencia
+        };
       }
       return null;
     });
@@ -69,19 +84,18 @@ export default async function handler(request, response) {
     const results = await Promise.all(checkPromises);
     const zombieUrls = results.filter(result => result !== null);
     
-    // ---- NUEVO: Guardar en la Base de Datos ----
-    const { error: insertError } = await supabase
+    const dataToSave = {
+        zombies: zombieUrls,
+        log: `Análisis completado. Se encontraron ${zombieUrls.length} URLs no indexadas.`
+    };
+    
+    await supabase
       .from('analisis_resultados')
       .insert({
         project_id: projectId,
         module_type: 'zombie-urls',
-        results_data: { zombies: zombieUrls } // Guardamos el array dentro de un objeto
+        results_data: dataToSave
       });
-
-    if (insertError) {
-      console.error("Error al guardar el resultado de 'zombie-urls':", insertError.message);
-    }
-    // ---- FIN DEL BLOQUE DE GUARDADO ----
 
     response.status(200).json(zombieUrls);
 
