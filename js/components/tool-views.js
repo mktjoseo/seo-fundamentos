@@ -1,4 +1,4 @@
-// js/components/tool-views.js (Versión con data-module estandarizado a kebab-case)
+// js/components/tool-views.js (Versión con la sentencia de exportación corregida)
 
 function renderStructureView(appState) {
     const inputHTML = `
@@ -160,8 +160,6 @@ function renderLinkingView(appState) {
         </div>`;
 }
 
-// renderZombiesView actualizada con lógica visual
-
 function renderZombiesView(appState) {
     const currentProject = appState.projects.find(p => p.id === appState.currentProjectId);
 
@@ -195,7 +193,6 @@ function renderZombiesView(appState) {
         const warnings = results.filter(r => r.type === 'warning');
         const infos = results.filter(r => r.type === 'info');
 
-        // Función para renderizar una fila de resultado
         const renderRow = (r) => {
             const isWarning = r.type === 'warning';
             const icon = isWarning ? 'warning-outline' : 'checkmark-circle-outline';
@@ -229,7 +226,6 @@ function renderZombiesView(appState) {
     `;
     }
 
-    // El resultado de esta función es un array, no un objeto
     const results = appState.moduleResults['zombie-urls'];
     let resultsHTML = '';
     if (appState.isLoading) {
@@ -247,7 +243,6 @@ function renderZombiesView(appState) {
         </div>
     `;
 }
-
 
 function renderSchemaView(appState) {
     const inputHTML = `
@@ -310,8 +305,6 @@ function renderSchemaView(appState) {
         </div>
     `;
 }
-
-// js/components/tool-views.js (renderContentStrategyView actualizada para mostrar el log)
 
 function renderContentStrategyView(appState) {
     const inputHTML = `
@@ -414,7 +407,6 @@ function renderContentStrategyView(appState) {
         </div>`;
 }
 
-// Exportamos todas las funciones para que app.js pueda usarlas
 export {
     renderStructureView,
     renderLinkingView,
