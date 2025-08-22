@@ -1,4 +1,4 @@
-// api/content-strategy.js (Versión para Vercel, endurecida y optimizada)
+// api/content-strategy.js (Versión Final para Vercel, blindada contra HTML vacío)
 
 const { createClient } = require('@supabase/supabase-js');
 const { JSDOM } = require('jsdom');
@@ -53,13 +53,11 @@ export default async function handler(request, response) {
       body: JSON.stringify({ q: keyword, num: 5 })
     });
     if (!serperResponse.ok) {
-        // Mensaje de error mejorado
         throw new Error(`Error al obtener competidores de Serper (Status: ${serperResponse.status}). Verifica tu clave de API de Serper.`);
     }
     
     const serperData = await serperResponse.json();
 
-    // Verificación de resultados antes de usarlos
     if (!serperData.organic) {
         throw new Error('La respuesta de Serper no contiene resultados de búsqueda. Revisa tu clave o los términos de búsqueda.');
     }
@@ -87,10 +85,12 @@ export default async function handler(request, response) {
         if (scrapeResponse.ok) {
           const html = await scrapeResponse.text();
           
-          // JSDOM optimizado para no cargar recursos externos (soluciona el error de CSS)
           const dom = new JSDOM(html, { resources: "usable" });
           const { document } = dom.window;
-          combinedText += `Título: ${document?.querySelector('h1')?.textContent || ''}\nContenido: ${document?.body?.innerText.slice(0, 1500) || ''}\n\n`;
+          
+          // ---- LÍNEA CORREGIDA Y BLINDADA ----
+          const bodyText = document?.body?.innerText || '';
+          combinedText += `Título: ${document?.querySelector('h1')?.textContent || ''}\nContenido: ${bodyText.slice(0, 1500)}\n\n`;
         }
       }
       return { domain, content: combinedText };
@@ -115,6 +115,7 @@ export default async function handler(request, response) {
     response.status(200).json(analysisResult);
 
   } catch (err) {
-    response.status(401).json({ error: err.message });
+    // Devolvemos un 500 para errores internos del servidor
+    response.status(500).json({ error: err.message });
   }
 }
