@@ -1,4 +1,4 @@
-// js/app.js (Versión Final con Dashboard Real)
+// js/app.js (Versión Final con Dashboard Real y corrección de bucle)
 
 // --- 1. IMPORTACIONES DE MÓDulos ---
 import { renderDashboard, renderCharts } from './components/dashboard-view.js';
@@ -19,10 +19,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     // --- 3. DATOS Y ESTADO DE LA APLICACIÓN ---
-    
-    // --- CAMBIO 1: Eliminamos los datos de ejemplo 'mockProjectDetails' ---
-    // const mockProjectDetails = { ... }; // ¡Esta línea se ha borrado!
-
     const appState = {
         session: null, 
         userProfile: null,
@@ -39,7 +35,6 @@ document.addEventListener('DOMContentLoaded', () => {
         isDeleteModalOpen: false, 
         projectToDelete: null, 
         projectActionsOpen: {},
-        // --- CAMBIO 2: Nuevo estado para guardar los datos reales del dashboard ---
         dashboardData: null, 
     };
     
@@ -65,19 +60,25 @@ document.addEventListener('DOMContentLoaded', () => {
     const modalContainer = document.getElementById('modal-container');
 
     // --- 5. LÓGICA DE RENDERIZADO Y ESTADO ---
-    function setState(newState) {
+    function setState(newState, shouldRender = true) {
         Object.assign(appState, newState);
-        render();
+        if (shouldRender) {
+            render();
+        }
     }
 
-    // --- CAMBIO 3: Nueva función para cargar los datos del dashboard desde el backend ---
     async function loadDashboardData() {
         if (!appState.currentProjectId) {
-            setState({ dashboardData: null });
+            setState({ dashboardData: null, isLoading: false });
             return;
         }
 
-        setState({ isLoading: true, dashboardData: null });
+        // CORRECCIÓN 1: No llamamos a setState para 'isLoading', lo manejamos manualmente
+        // para evitar el bucle.
+        appState.isLoading = true;
+        appState.dashboardData = null;
+        render(); // Renderizamos una vez para mostrar el spinner
+
         try {
             const token = appState.session.access_token;
             const response = await fetch('/api/get-dashboard-summary', {
@@ -90,15 +91,16 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'No se pudo cargar el resumen del dashboard.');
+                const errorText = await response.text();
+                throw new Error(`Error en el servidor: ${errorText}`);
             }
             const data = await response.json();
+            // Ahora sí llamamos a setState para actualizar la vista con los datos finales.
             setState({ isLoading: false, dashboardData: data });
 
         } catch (error) {
             console.error(error);
-            alert(error.message);
+            alert(`Fallo al cargar los datos del dashboard. Detalle: ${error.message}`);
             setState({ isLoading: false });
         }
     }
@@ -148,17 +150,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             mainAppContainer.classList.remove('hidden');
             authContainer.classList.add('hidden');
-
-            if (appState.currentView !== appState.lastRenderedView) {
-                appState.moduleResults = {};
-                appState.dashboardDetailsOpen = {};
-                // Si la nueva vista es el dashboard, cargamos sus datos
-                if (appState.currentView === 'dashboard') {
-                    loadDashboardData();
-                }
-            }
             
-            // --- CAMBIO 4: La vista del dashboard ahora usa los datos reales de 'appState.dashboardData' ---
             const viewMap = {
                 'dashboard': () => renderDashboard(appState, appState.dashboardData),
                 'projects': () => renderProjectsView(appState),
@@ -181,7 +173,6 @@ document.addEventListener('DOMContentLoaded', () => {
             renderModals();
             if (appState.currentView === 'dashboard') {
                 exportButtonContainer.innerHTML = `<button id="export-pdf-btn" class="bg-primary hover:opacity-90 text-primary-foreground font-semibold px-4 py-2 rounded-md flex items-center gap-2"><ion-icon name="download-outline"></ion-icon> Exportar</button>`;
-                // Dibujamos los gráficos solo cuando los datos reales estén listos
                 if (appState.dashboardData) {
                     setTimeout(() => renderCharts(appState.dashboardData), 0);
                 }
@@ -197,7 +188,17 @@ document.addEventListener('DOMContentLoaded', () => {
     function setupEventListeners() {
         sidebarNav.addEventListener('click', e => {
             const link = e.target.closest('button[data-view]');
-            if (link) { setState({ currentView: link.dataset.view }); }
+            if (link) {
+                const newView = link.dataset.view;
+                if (newView !== appState.currentView) {
+                    setState({ currentView: newView, moduleResults: {}, dashboardDetailsOpen: {} }, false); // No renderizamos aún
+                    if (newView === 'dashboard') {
+                        loadDashboardData(); // Esta función se encargará del renderizado
+                    } else {
+                        render(); // Renderizamos para las otras vistas
+                    }
+                }
+            }
         });
 
         projectSelectorContainer.addEventListener('click', e => {
@@ -207,9 +208,13 @@ document.addEventListener('DOMContentLoaded', () => {
             if (button.id === 'project-selector-btn') {
                 setState({ isDropdownOpen: !appState.isDropdownOpen });
             } else if (button.dataset.projectId) {
-                // Al cambiar de proyecto, vamos al dashboard y cargamos los nuevos datos
-                setState({ currentProjectId: parseInt(button.dataset.projectId), isDropdownOpen: false, currentView: 'dashboard' });
-                loadDashboardData();
+                const newProjectId = parseInt(button.dataset.projectId);
+                if (newProjectId !== appState.currentProjectId) {
+                    setState({ currentProjectId: newProjectId, isDropdownOpen: false, currentView: 'dashboard' }, false);
+                    loadDashboardData();
+                } else {
+                    setState({ isDropdownOpen: false });
+                }
             }
         });
 
@@ -224,7 +229,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });      
 
         mainContent.addEventListener('click', async (e) => {
-            // ... (el resto de este listener no necesita cambios)
             const actionButton = e.target.closest('button[data-project-action-id]');
             const editButton = e.target.closest('button[data-edit-project-id]');
             const cancelButton = e.target.closest('button[data-cancel-edit-id]');
@@ -562,14 +566,21 @@ document.addEventListener('DOMContentLoaded', () => {
         // Al iniciar, cargamos los datos del dashboard para el primer proyecto
         if (appState.currentProjectId) {
             loadDashboardData();
+        } else {
+            render(); // Si no hay proyectos, solo renderizamos
         }
-        render();
     }
     
     function init() {
         supabaseClient.auth.onAuthStateChange(async (event, session) => {
-            if (session?.access_token !== appState.session?.access_token) {
-                appState.session = session;
+            // CORRECCIÓN 2: El bucle se origina aquí.
+            // Esta función se llama MÚLTIPLES VECES por Supabase.
+            // Solo debemos actuar en el PRIMER cambio de estado real (login o logout)
+            const isLoggedIn = session?.access_token;
+            const wasLoggedIn = appState.session?.access_token;
+
+            if (isLoggedIn !== wasLoggedIn) {
+                setState({ session: session }, false); // Guardamos la sesión sin re-renderizar
                 if (session) {
                     await initAppForUser();
                 } else {
