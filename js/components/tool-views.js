@@ -160,20 +160,13 @@ function renderLinkingView(appState) {
         </div>`;
 }
 
+// renderZombiesView actualizada (con manejo de sitemap)
+
 function renderZombiesView(appState) {
     const currentProject = appState.projects.find(p => p.id === appState.currentProjectId);
 
-    if (!currentProject) {
-        return `
-            <div class="text-center py-12 bg-card rounded-lg border border-dashed border-border">
-                <ion-icon name="briefcase-outline" class="text-5xl text-muted-foreground"></ion-icon>
-                <h3 class="text-xl font-bold mt-4">No hay un proyecto seleccionado</h3>
-                <p class="text-muted-foreground mt-2">Por favor, crea o selecciona un proyecto para poder analizar sus URLs.</p>
-                <button data-view="projects" class="mt-6 bg-primary hover:opacity-90 text-primary-foreground font-semibold px-6 py-2.5 rounded-md">
-                    Ir a Proyectos
-                </button>
-            </div>
-        `;
+    if (!currentProject) { // Sin cambios aquí
+        return `<div class="text-center py-12 bg-card rounded-lg border border-dashed border-border"><ion-icon name="briefcase-outline" class="text-5xl text-muted-foreground"></ion-icon><h3 class="text-xl font-bold mt-4">No hay un proyecto seleccionado</h3><p class="text-muted-foreground mt-2">Por favor, crea o selecciona un proyecto para poder analizar sus URLs.</p><button data-view="projects" class="mt-6 bg-primary hover:opacity-90 text-primary-foreground font-semibold px-6 py-2.5 rounded-md">Ir a Proyectos</button></div>`;
     }
 
     const inputHTML = `
@@ -190,38 +183,40 @@ function renderZombiesView(appState) {
         </div>`;
     
     const resultsRenderer = (results) => {
+        // --- LÓGICA MEJORADA PARA MOSTRAR DIFERENTES TIPOS DE RESULTADOS ---
+        const errors = results.filter(r => r.type === 'error');
         const warnings = results.filter(r => r.type === 'warning');
         const infos = results.filter(r => r.type === 'info');
+
+        // Si el único resultado es un error de sitemap, lo mostramos de forma especial
+        if (errors.length > 0) {
+            const error = errors[0];
+            return `
+            <div class="bg-destructive/10 border border-destructive/30 text-destructive p-6 rounded-lg">
+                <h4 class="font-bold text-lg flex items-center gap-2"><ion-icon name="close-circle-outline"></ion-icon> Problema Crítico Encontrado</h4>
+                <p class="mt-2 font-semibold">${error.status} en la URL:</p>
+                <p class="font-mono text-sm bg-destructive/20 p-2 rounded-md mt-1">${error.url}</p>
+                <p class="mt-4 font-semibold">Recomendación:</p>
+                <p>${error.suggestion}</p>
+            </div>
+            `;
+        }
 
         const renderRow = (r) => {
             const isWarning = r.type === 'warning';
             const icon = isWarning ? 'warning-outline' : 'checkmark-circle-outline';
             const textColor = isWarning ? 'text-destructive' : 'text-secondary';
-            
-            return `
-            <div class="grid grid-cols-1 md:grid-cols-3 items-center gap-4 bg-background p-3 rounded-md">
-                <span class="font-mono text-sm text-foreground col-span-1">${r.url}</span>
-                <div class="${textColor} font-semibold text-sm flex items-center gap-2"><ion-icon name="${icon}"></ion-icon>${r.status}</div>
-                <div class="text-muted-foreground text-sm">${r.suggestion}</div>
-            </div>`;
+            return `<div class="grid grid-cols-1 md:grid-cols-3 items-center gap-4 bg-background p-3 rounded-md"><span class="font-mono text-sm text-foreground col-span-1">${r.url}</span><div class="${textColor} font-semibold text-sm flex items-center gap-2"><ion-icon name="${icon}"></ion-icon>${r.status}</div><div class="text-muted-foreground text-sm">${r.suggestion}</div></div>`;
         };
         
         return `
         <div class="bg-card p-6 rounded-lg border border-border space-y-6">
             <div>
                 <h4 class="text-lg font-semibold">Diagnóstico de Indexación</h4>
-                <p class="text-sm text-muted-foreground mt-1">Se encontraron <span class="font-bold text-destructive">${warnings.length} URLs</span> que podrían ser un problema y <span class="font-bold text-secondary">${infos.length} archivos</span> correctamente no indexados.</p>
+                <p class="text-sm text-muted-foreground mt-1">Se encontraron <span class="font-bold text-destructive">${warnings.length} URLs</span> con posibles problemas y <span class="font-bold text-secondary">${infos.length} archivos</span> correctamente no indexados.</p>
             </div>
-            ${warnings.length > 0 ? `
-             <div class="bg-muted p-4 rounded-lg">
-                <h5 class="font-semibold text-foreground mb-2 text-destructive flex items-center gap-2"><ion-icon name="warning-outline"></ion-icon>Posibles Problemas a Revisar</h5>
-                <div class="space-y-3 mt-3">${warnings.map(renderRow).join('')}</div>
-            </div>` : ''}
-            ${infos.length > 0 ? `
-            <div class="bg-muted p-4 rounded-lg">
-                <h5 class="font-semibold text-foreground mb-2 text-secondary flex items-center gap-2"><ion-icon name="checkmark-done-outline"></ion-icon>Archivos de Sistema (Correcto)</h5>
-                <div class="space-y-3 mt-3">${infos.map(renderRow).join('')}</div>
-            </div>` : ''}
+            ${warnings.length > 0 ? `<div class="bg-muted p-4 rounded-lg"><h5 class="font-semibold text-foreground mb-2 text-destructive flex items-center gap-2"><ion-icon name="warning-outline"></ion-icon>Posibles Problemas a Revisar</h5><div class="space-y-3 mt-3">${warnings.map(renderRow).join('')}</div></div>` : ''}
+            ${infos.length > 0 ? `<div class="bg-muted p-4 rounded-lg"><h5 class="font-semibold text-foreground mb-2 text-secondary flex items-center gap-2"><ion-icon name="checkmark-done-outline"></ion-icon>Archivos de Sistema (Correcto)</h5><div class="space-y-3 mt-3">${infos.map(renderRow).join('')}</div></div>` : ''}
         </div>
     `;
     }
