@@ -390,10 +390,6 @@ function renderContentStrategyView(appState) {
         </div>`;
 }
 
-// ... asegúrate de que el resto de funciones en este archivo y la línea de exportación final permanezcan ...
-
-export { renderContentStrategyView /*, otras vistas...*/ };
-
 // Exportamos todas las funciones para que app.js pueda usarlas
 export {
     renderStructureView,
