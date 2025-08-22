@@ -287,11 +287,13 @@ function renderSchemaView(appState) {
     `;
 }
 
+// js/components/tool-views.js (renderContentStrategyView actualizada para mostrar el log)
+
 function renderContentStrategyView(appState) {
     const inputHTML = `
         <h3 class="text-2xl font-bold text-foreground">Generador de Estrategia de Contenido</h3>
         <div class="text-muted-foreground mt-2 space-y-2 text-sm">
-            <p><strong>Esta es la herramienta más potente de la suite.</strong> Descubre oportunidades de contenido únicas.</p>
+             <p>Actúa como un estratega SEO automatizado para descubrir oportunidades de contenido únicas.</p>
         </div>
         <div class="mt-6">
             <label for="content-strategy-keyword-input" class="block text-sm font-bold text-muted-foreground mb-2">Palabra Clave Principal del Nicho</label>
@@ -306,17 +308,35 @@ function renderContentStrategyView(appState) {
             <button data-module="content-strategy" class="bg-primary hover:opacity-90 text-primary-foreground font-semibold px-6 py-2.5 rounded-md">Analizar Estrategia</button>
         </div>`;
 
-    const resultsRenderer = (results) => `
+    const resultsRenderer = (data) => {
+        const results = data.competitors || [];
+        const activityLog = data.activityLog || [];
+
+        const activityLogHTML = `
+            <div class="mt-6 border-t border-border pt-4">
+                <button data-module-key="content-strategy-log" class="text-sm font-semibold text-muted-foreground hover:text-primary flex items-center gap-2">
+                    Ver Actividad del Análisis
+                    <ion-icon name="chevron-down-outline" class="transition-transform ${appState.dashboardDetailsOpen['content-strategy-log'] ? 'rotate-180' : ''}"></ion-icon>
+                </button>
+                <div class="collapse-content ${appState.dashboardDetailsOpen['content-strategy-log'] ? 'open' : ''} mt-2">
+                    <ul class="space-y-2 text-xs font-mono text-muted-foreground">
+                        ${activityLog.map(log => `<li class="flex items-start gap-2"><ion-icon name="checkmark-done-outline" class="text-secondary flex-shrink-0 mt-px"></ion-icon><span>${log}</span></li>`).join('')}
+                    </ul>
+                </div>
+            </div>`;
+
+        return `
         <div>
             <div class="flex justify-between items-center mb-6">
                 <h4 class="text-xl font-bold text-foreground">Análisis Estratégico de Competidores</h4>
+                ${results.length > 0 ? `
                 <button id="export-strategy-btn" class="text-sm bg-secondary hover:opacity-90 text-secondary-foreground font-semibold px-4 py-2 rounded-md flex items-center gap-2 inline-flex">
                     <ion-icon name="download-outline"></ion-icon>
                     Exportar
-                </button>
+                </button>` : ''}
             </div>
             <div class="space-y-6">
-            ${results.competitors.map(c => `
+            ${results.map(c => `
                 <div class="results-card strategy-card overflow-hidden">
                     <div class="p-5">
                         <h5 class="font-bold text-lg text-primary">${c.domain}</h5>
@@ -349,22 +369,30 @@ function renderContentStrategyView(appState) {
                 </div>
             `).join('')}
             </div>
+            ${activityLog.length > 0 ? activityLogHTML : ''}
         </div>`;
+    }
+
+    const data = appState.moduleResults['content-strategy'];
+    let resultsHTML = '';
+    if (appState.isLoading) {
+        resultsHTML = `<div class="results-card text-center py-12"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div><p class="mt-4 text-muted-foreground">Realizando análisis multi-API... Esto puede tardar hasta un minuto.</p></div>`;
+    } else if (data) {
+        resultsHTML = resultsRenderer(data);
+    } else {
+        resultsHTML = `<div class="text-center py-12"><p class="text-muted-foreground">Los resultados de tu análisis estratégico aparecerán aquí.</p></div>`;
+    }
 
     return `
         <div class="max-w-4xl mx-auto space-y-8">
             <div class="bg-card p-6 rounded-lg border border-border">${inputHTML}</div>
-            <div id="results-container">
-                ${appState.isLoading
-                    ? `<div class="results-card text-center py-12"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div><p class="mt-4 text-muted-foreground">Realizando análisis multi-API...</p></div>`
-                    : appState.moduleResults['content-strategy']
-                        ? resultsRenderer(appState.moduleResults['content-strategy'])
-                        : `<div class="text-center py-12"><p class="text-muted-foreground">Los resultados de tu análisis estratégico aparecerán aquí.</p></div>`
-                }
-            </div>
-        </div>
-    `;
+            <div id="results-container">${resultsHTML}</div>
+        </div>`;
 }
+
+// ... asegúrate de que el resto de funciones en este archivo y la línea de exportación final permanezcan ...
+
+export { renderContentStrategyView /*, otras vistas...*/ };
 
 // Exportamos todas las funciones para que app.js pueda usarlas
 export {
