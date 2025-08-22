@@ -1,4 +1,23 @@
-// js/components/tool-views.js (Versión con la sentencia de exportación corregida)
+// js/components/tool-views.js (Versión con diseño de Consola de Proceso unificado)
+
+// --- NUEVO: Componente reutilizable para la Consola de Proceso ---
+function renderProcessConsole(logMessages) {
+    if (!logMessages || logMessages.length === 0) return '';
+    return `
+    <div class="bg-card border border-border rounded-lg mt-8">
+        <div class="flex items-center gap-2 px-4 py-2 border-b border-border">
+            <div class="flex gap-1.5">
+                <div class="w-3 h-3 rounded-full bg-red-500"></div>
+                <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+                <div class="w-3 h-3 rounded-full bg-green-500"></div>
+            </div>
+            <h4 class="text-sm font-semibold text-foreground">Consola de Proceso</h4>
+        </div>
+        <div class="p-4 font-mono text-xs text-muted-foreground max-h-48 overflow-y-auto">
+            ${logMessages.map(log => `<div><span class="text-secondary mr-2">&gt;</span>${log}</div>`).join('')}
+        </div>
+    </div>`;
+};
 
 function renderStructureView(appState) {
     const inputHTML = `
@@ -160,12 +179,10 @@ function renderLinkingView(appState) {
         </div>`;
 }
 
-// renderZombiesView actualizada (con manejo de sitemap)
-
 function renderZombiesView(appState) {
     const currentProject = appState.projects.find(p => p.id === appState.currentProjectId);
 
-    if (!currentProject) { // Sin cambios aquí
+    if (!currentProject) {
         return `<div class="text-center py-12 bg-card rounded-lg border border-dashed border-border"><ion-icon name="briefcase-outline" class="text-5xl text-muted-foreground"></ion-icon><h3 class="text-xl font-bold mt-4">No hay un proyecto seleccionado</h3><p class="text-muted-foreground mt-2">Por favor, crea o selecciona un proyecto para poder analizar sus URLs.</p><button data-view="projects" class="mt-6 bg-primary hover:opacity-90 text-primary-foreground font-semibold px-6 py-2.5 rounded-md">Ir a Proyectos</button></div>`;
     }
 
@@ -182,26 +199,17 @@ function renderZombiesView(appState) {
             <button data-module="zombie-urls" class="bg-primary hover:opacity-90 text-primary-foreground font-semibold px-6 py-2.5 rounded-md">Buscar URLs Zombie</button>
         </div>`;
     
-    const resultsRenderer = (results) => {
-        // --- LÓGICA MEJORADA PARA MOSTRAR DIFERENTES TIPOS DE RESULTADOS ---
+    const resultsRenderer = (data) => {
+        const results = data.results || [];
         const errors = results.filter(r => r.type === 'error');
         const warnings = results.filter(r => r.type === 'warning');
         const infos = results.filter(r => r.type === 'info');
 
-        // Si el único resultado es un error de sitemap, lo mostramos de forma especial
         if (errors.length > 0) {
             const error = errors[0];
-            return `
-            <div class="bg-destructive/10 border border-destructive/30 text-destructive p-6 rounded-lg">
-                <h4 class="font-bold text-lg flex items-center gap-2"><ion-icon name="close-circle-outline"></ion-icon> Problema Crítico Encontrado</h4>
-                <p class="mt-2 font-semibold">${error.status} en la URL:</p>
-                <p class="font-mono text-sm bg-destructive/20 p-2 rounded-md mt-1">${error.url}</p>
-                <p class="mt-4 font-semibold">Recomendación:</p>
-                <p>${error.suggestion}</p>
-            </div>
-            `;
+            return `<div class="bg-destructive/10 border border-destructive/30 text-destructive p-6 rounded-lg"><h4 class="font-bold text-lg flex items-center gap-2"><ion-icon name="close-circle-outline"></ion-icon> Problema Crítico Encontrado</h4><p class="mt-2 font-semibold">${error.status} en la URL:</p><p class="font-mono text-sm bg-destructive/20 p-2 rounded-md mt-1">${error.url}</p><p class="mt-4 font-semibold">Recomendación:</p><p>${error.suggestion}</p></div>`;
         }
-
+        
         const renderRow = (r) => {
             const isWarning = r.type === 'warning';
             const icon = isWarning ? 'warning-outline' : 'checkmark-circle-outline';
@@ -209,32 +217,27 @@ function renderZombiesView(appState) {
             return `<div class="grid grid-cols-1 md:grid-cols-3 items-center gap-4 bg-background p-3 rounded-md"><span class="font-mono text-sm text-foreground col-span-1">${r.url}</span><div class="${textColor} font-semibold text-sm flex items-center gap-2"><ion-icon name="${icon}"></ion-icon>${r.status}</div><div class="text-muted-foreground text-sm">${r.suggestion}</div></div>`;
         };
         
-        return `
-        <div class="bg-card p-6 rounded-lg border border-border space-y-6">
-            <div>
-                <h4 class="text-lg font-semibold">Diagnóstico de Indexación</h4>
-                <p class="text-sm text-muted-foreground mt-1">Se encontraron <span class="font-bold text-destructive">${warnings.length} URLs</span> con posibles problemas y <span class="font-bold text-secondary">${infos.length} archivos</span> correctamente no indexados.</p>
-            </div>
-            ${warnings.length > 0 ? `<div class="bg-muted p-4 rounded-lg"><h5 class="font-semibold text-foreground mb-2 text-destructive flex items-center gap-2"><ion-icon name="warning-outline"></ion-icon>Posibles Problemas a Revisar</h5><div class="space-y-3 mt-3">${warnings.map(renderRow).join('')}</div></div>` : ''}
-            ${infos.length > 0 ? `<div class="bg-muted p-4 rounded-lg"><h5 class="font-semibold text-foreground mb-2 text-secondary flex items-center gap-2"><ion-icon name="checkmark-done-outline"></ion-icon>Archivos de Sistema (Correcto)</h5><div class="space-y-3 mt-3">${infos.map(renderRow).join('')}</div></div>` : ''}
-        </div>
-    `;
+        return `<div class="bg-card p-6 rounded-lg border border-border space-y-6"><div><h4 class="text-lg font-semibold">Diagnóstico de Indexación</h4><p class="text-sm text-muted-foreground mt-1">Se encontraron <span class="font-bold text-destructive">${warnings.length} URLs</span> con posibles problemas y <span class="font-bold text-secondary">${infos.length} archivos</span> correctamente no indexados.</p></div>${warnings.length > 0 ? `<div class="bg-muted p-4 rounded-lg"><h5 class="font-semibold text-foreground mb-2 text-destructive flex items-center gap-2"><ion-icon name="warning-outline"></ion-icon>Posibles Problemas a Revisar</h5><div class="space-y-3 mt-3">${warnings.map(renderRow).join('')}</div></div>` : ''}${infos.length > 0 ? `<div class="bg-muted p-4 rounded-lg"><h5 class="font-semibold text-foreground mb-2 text-secondary flex items-center gap-2"><ion-icon name="checkmark-done-outline"></ion-icon>Archivos de Sistema (Correcto)</h5><div class="space-y-3 mt-3">${infos.map(renderRow).join('')}</div></div>` : ''}</div>`;
     }
 
-    const results = appState.moduleResults['zombie-urls'];
+    const data = appState.moduleResults['zombie-urls'];
+    let consoleHTML = '';
     let resultsHTML = '';
+    
     if (appState.isLoading) {
-        resultsHTML = `<div class="results-card flex items-center justify-center h-48"><div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div></div>`
-    } else if (results) {
-        resultsHTML = resultsRenderer(results);
-    } else {
-        resultsHTML = `<div class="text-center py-12"><p class="text-muted-foreground">Los resultados de tu análisis aparecerán aquí.</p></div>`;
+        consoleHTML = renderProcessConsole(['Iniciando análisis...']);
+    } else if (data) {
+        consoleHTML = renderProcessConsole(data.activityLog);
+        resultsHTML = resultsRenderer(data);
     }
 
     return `
         <div class="max-w-4xl mx-auto space-y-8">
             <div class="bg-card p-6 rounded-lg border border-border">${inputHTML}</div>
-            <div id="results-container">${resultsHTML}</div>
+            <div id="results-container">
+                ${consoleHTML}
+                <div class="mt-8">${resultsHTML}</div>
+            </div>
         </div>
     `;
 }
@@ -264,7 +267,7 @@ function renderSchemaView(appState) {
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div class="results-card">
                 <h4 class="text-lg font-semibold text-foreground mb-4">Informe de Validación</h4>
-                <div class="${results.validation.status.includes('Error') ? 'bg-destructive/10 text-destructive border-destructive/30' : 'bg-accent/10 text-accent border-accent/30'} p-4 rounded-md border">
+                <div class="${results.validation.status.includes('Error') ? 'bg-destructive/10 text-destructive border-destructive/30' : results.validation.status.includes('advertencias') ? 'bg-accent/10 text-accent border-accent/30' : 'bg-secondary/10 text-secondary border-secondary/30'} p-4 rounded-md border">
                     <p class="font-bold flex items-center gap-2">
                         <ion-icon name="${results.validation.status.includes('Error') ? 'close-circle-outline' : 'checkmark-circle-outline'}"></ion-icon>
                         ${results.validation.status}
@@ -322,21 +325,7 @@ function renderContentStrategyView(appState) {
 
     const resultsRenderer = (data) => {
         const results = data.competitors || [];
-        const activityLog = data.activityLog || [];
-
-        const activityLogHTML = `
-            <div class="mt-6 border-t border-border pt-4">
-                <button data-module-key="content-strategy-log" class="text-sm font-semibold text-muted-foreground hover:text-primary flex items-center gap-2">
-                    Ver Actividad del Análisis
-                    <ion-icon name="chevron-down-outline" class="transition-transform ${appState.dashboardDetailsOpen['content-strategy-log'] ? 'rotate-180' : ''}"></ion-icon>
-                </button>
-                <div class="collapse-content ${appState.dashboardDetailsOpen['content-strategy-log'] ? 'open' : ''} mt-2">
-                    <ul class="space-y-2 text-xs font-mono text-muted-foreground">
-                        ${activityLog.map(log => `<li class="flex items-start gap-2"><ion-icon name="checkmark-done-outline" class="text-secondary flex-shrink-0 mt-px"></ion-icon><span>${log}</span></li>`).join('')}
-                    </ul>
-                </div>
-            </div>`;
-
+        
         return `
         <div>
             <div class="flex justify-between items-center mb-6">
@@ -381,24 +370,27 @@ function renderContentStrategyView(appState) {
                 </div>
             `).join('')}
             </div>
-            ${activityLog.length > 0 ? activityLogHTML : ''}
         </div>`;
     }
 
     const data = appState.moduleResults['content-strategy'];
+    let consoleHTML = '';
     let resultsHTML = '';
+    
     if (appState.isLoading) {
-        resultsHTML = `<div class="results-card text-center py-12"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div><p class="mt-4 text-muted-foreground">Realizando análisis multi-API... Esto puede tardar hasta un minuto.</p></div>`;
+        consoleHTML = renderProcessConsole(['Iniciando análisis...']);
     } else if (data) {
+        consoleHTML = renderProcessConsole(data.activityLog);
         resultsHTML = resultsRenderer(data);
-    } else {
-        resultsHTML = `<div class="text-center py-12"><p class="text-muted-foreground">Los resultados de tu análisis estratégico aparecerán aquí.</p></div>`;
     }
 
     return `
         <div class="max-w-4xl mx-auto space-y-8">
             <div class="bg-card p-6 rounded-lg border border-border">${inputHTML}</div>
-            <div id="results-container">${resultsHTML}</div>
+            <div id="results-container">
+                ${consoleHTML}
+                <div class="mt-8">${resultsHTML}</div>
+            </div>
         </div>`;
 }
 

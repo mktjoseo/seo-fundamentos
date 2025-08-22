@@ -1,8 +1,9 @@
-// api/linking.js (Versión con guardado en la base de datos)
+// api/linking.js (Versión Final Profesional, con filtros avanzados y Log)
 
 const { createClient } = require('@supabase/supabase-js');
 const { JSDOM } = require('jsdom');
 
+// Expresión regular para ignorar enlaces a archivos comunes
 const FILE_EXTENSION_REGEX = /\.(pdf|jpg|jpeg|png|gif|svg|zip|rar|exe|mp3|mp4|avi)$/i;
 
 export default async function handler(request, response) {
@@ -13,37 +14,31 @@ export default async function handler(request, response) {
   if (request.method === 'OPTIONS') {
     return response.status(200).end();
   }
+  
+  const activityLog = [];
 
   try {
-    // ---- LÓGICA DE AUTENTICACIÓN ----
-    const authHeader = request.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      throw new Error('Se requiere un token de autenticación válido.');
+    const { startUrl, keyUrls, projectId } = request.body;
+    if (!startUrl || !keyUrls || !keyUrls.length || !projectId) {
+      throw new Error('Faltan datos requeridos (startUrl, keyUrls, o projectId).');
     }
+
+    // --- Autenticación ---
+    const authHeader = request.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) throw new Error('Se requiere un token de autenticación válido.');
     const token = authHeader.split(' ')[1];
-
-    const supabase = createClient(
-      process.env.SUPABASE_URL,
-      process.env.SUPABASE_ANON_KEY,
-      { global: { headers: { Authorization: `Bearer ${token}` } } }
-    );
-
+    const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY, { global: { headers: { Authorization: `Bearer ${token}` } } });
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     if (userError || !user) throw new Error('Autenticación fallida.');
-    
     const { data: profile, error: profileError } = await supabase.from('profiles').select('scraper_api_key').single();
     if (profileError) throw new Error('No se pudo encontrar el perfil del usuario.');
     if (!profile.scraper_api_key) throw new Error('El usuario no ha configurado su ScraperAPI Key.');
-    
     const USER_SCRAPER_API_KEY = profile.scraper_api_key;
-    // ---- FIN DE LA LÓGICA ----
+    // --- Fin Autenticación ---
 
-    const { startUrl, keyUrls, projectId } = request.body;
-    if (!startUrl || !keyUrls || !keyUrls.length || !projectId) {
-      throw new Error('Faltan datos requeridos (startUrl, keyUrls, or projectId).');
-    }
+    activityLog.push(`Iniciando rastreo desde: ${startUrl}`);
 
-    // --- Lógica del Crawler (sin cambios) ---
+    // --- Lógica del Crawler ---
     const queue = [{ url: startUrl, depth: 0 }];
     const visited = new Set([startUrl]);
     const results = new Map();
@@ -59,6 +54,8 @@ export default async function handler(request, response) {
         return urlObj.href.endsWith('/') ? urlObj.href.slice(0, -1) : urlObj.href;
     }));
 
+    activityLog.push(`Buscando ${normalizedKeyUrls.size} URLs clave.`);
+
     while (queue.length > 0 && pagesCrawled < CRAWL_LIMIT) {
       const { url, depth } = queue.shift();
       pagesCrawled++;
@@ -66,19 +63,27 @@ export default async function handler(request, response) {
       let normalizedUrlForCheck = url.endsWith('/') ? url.slice(0, -1) : url;
       if (normalizedKeyUrls.has(normalizedUrlForCheck)) {
         results.set(normalizedUrlForCheck, depth);
+        activityLog.push(`¡URL clave encontrada! "${url}" a ${depth} clics.`);
         normalizedKeyUrls.delete(normalizedUrlForCheck);
       }
       
-      if (normalizedKeyUrls.size === 0) break;
+      if (normalizedKeyUrls.size === 0) {
+        activityLog.push("Todas las URLs clave han sido encontradas.");
+        break;
+      }
 
       const scraperUrl = `http://api.scraperapi.com?api_key=${USER_SCRAPER_API_KEY}&url=${encodeURIComponent(url)}`;
       const fetchResponse = await fetch(scraperUrl);
 
-      if (!fetchResponse.ok) continue;
+      if (!fetchResponse.ok) {
+        console.error(`[ERROR] Falló el scrapeo de ${url} con status ${fetchResponse.status}.`);
+        continue;
+      }
       
       const html = await fetchResponse.text();
       const dom = new JSDOM(html);
       const { document } = dom.window;
+
       const links = document.querySelectorAll('a');
 
       for (const link of links) {
@@ -108,6 +113,10 @@ export default async function handler(request, response) {
       }
     }
 
+    if (pagesCrawled >= CRAWL_LIMIT) {
+        activityLog.push(`Límite de rastreo (${CRAWL_LIMIT} páginas) alcanzado.`);
+    }
+
     const finalResults = keyUrls.map(originalUrl => {
         let urlObj = new URL(originalUrl, startUrl);
         urlObj.hash = '';
@@ -127,27 +136,19 @@ export default async function handler(request, response) {
     
     const dataToReturn = {
         results: finalResults,
+        activityLog,
         crawlLog: crawlLogData
     };
-    
-    // ---- NUEVO: Guardar en la Base de Datos ----
-    const { error: insertError } = await supabase
-      .from('analisis_resultados')
-      .insert({
+
+    await supabase.from('analisis_resultados').insert({
         project_id: projectId,
         module_type: 'linking',
         results_data: dataToReturn 
-      });
-
-    if (insertError) {
-      console.error("Error al guardar el resultado del análisis:", insertError.message);
-      // No detenemos la ejecución, el usuario aún recibe su resultado.
-    }
-    // ---- FIN DEL BLOQUE DE GUARDADO ----
+    });
     
     response.status(200).json(dataToReturn);
 
   } catch (err) {
-    response.status(401).json({ error: err.message });
+    response.status(401).json({ error: err.message, activityLog });
   }
 }

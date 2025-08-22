@@ -1,4 +1,4 @@
-// api/content-strategy.js (Versión con Log de Actividad)
+// api/content-strategy.js (Versión Final con Log de Actividad)
 
 const { createClient } = require('@supabase/supabase-js');
 const { JSDOM } = require('jsdom');
@@ -16,14 +16,13 @@ export default async function handler(request, response) {
     return response.status(200).end();
   }
 
-  // Iniciamos el log de actividad
   const activityLog = [];
 
   try {
     const { keyword, projectId } = request.body;
     if (!keyword) throw new Error('La palabra clave es requerida.');
     
-    // ---- LÓGICA DE AUTENTICACIÓN ----
+    // --- Autenticación ---
     const authHeader = request.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) throw new Error('Se requiere un token de autenticación válido.');
     const token = authHeader.split(' ')[1];
@@ -34,7 +33,7 @@ export default async function handler(request, response) {
     if (profileError) throw new Error('No se pudo encontrar el perfil del usuario.');
     if (!profile.scraper_api_key || !profile.serper_api_key || !profile.gemini_api_key) throw new Error('El usuario debe configurar sus claves de Scraper, Serper y Gemini.');
     const { scraper_api_key, serper_api_key, gemini_api_key } = profile;
-    // ---- FIN DE LA LÓGICA ----
+    // --- Fin Autenticación ---
 
     activityLog.push(`Iniciando análisis para la keyword: "${keyword}"`);
 
@@ -96,10 +95,8 @@ export default async function handler(request, response) {
     const analysisResult = JSON.parse(jsonResponseText);
     activityLog.push("¡Análisis completado con éxito!");
     
-    // Creamos el objeto final de datos que incluye el resultado y el log
     const dataToReturn = { ...analysisResult, activityLog };
 
-    // Guardamos en la Base de Datos
     if (projectId) {
         await supabase.from('analisis_resultados').insert({
             project_id: projectId,
