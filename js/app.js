@@ -1,4 +1,4 @@
-// js/app.js (Versión con rutas y nombres estandarizados a kebab-case)
+// js/app.js (Versión Final con Dashboard Real)
 
 // --- 1. IMPORTACIONES DE MÓDulos ---
 import { renderDashboard, renderCharts } from './components/dashboard-view.js';
@@ -19,7 +19,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     // --- 3. DATOS Y ESTADO DE LA APLICACIÓN ---
-    const mockProjectDetails = {1: { healthScore: 88, issuesBySeverity: { high: 2, medium: 5, low: 12 }, modules: { structure: { name: "Estructura y Relevancia", health: 95, status: "secondary", issuesCount: 1, issuesList: [{ text: "El H1 de la home no contiene la palabra clave principal.", severity: 'low'}] }, linking: { name: "Profundidad de Enlazado", health: 75, status: "accent", issuesCount: 1, issuesList: [{ text: "Página clave /politica-de-devoluciones a 5 clics de profundidad.", severity: 'high'}] }, 'zombie-urls': { name: "URLs Zombie", health: 98, status: "secondary", issuesCount: 2, issuesList: [{ text: "/promociones/navidad-2019 no está indexada.", severity: 'medium'}] }, 'structured-data': { name: "Datos Estructurados", health: 60, status: "destructive", issuesCount: 1, issuesList: [{ text: "Falta la propiedad 'aggregateRating' en el schema de Producto.", severity: 'high'}] }, 'content-strategy': { name: "Estrategia de Contenido", health: 90, status: "secondary", issuesList: [] } } }, };
+    
+    // --- CAMBIO 1: Eliminamos los datos de ejemplo 'mockProjectDetails' ---
+    // const mockProjectDetails = { ... }; // ¡Esta línea se ha borrado!
 
     const appState = {
         session: null, 
@@ -37,9 +39,10 @@ document.addEventListener('DOMContentLoaded', () => {
         isDeleteModalOpen: false, 
         projectToDelete: null, 
         projectActionsOpen: {},
+        // --- CAMBIO 2: Nuevo estado para guardar los datos reales del dashboard ---
+        dashboardData: null, 
     };
     
-    // Las claves ahora están en kebab-case para coincidir con los nombres de archivo
     const views = {
         'dashboard': { name: 'Dashboard', icon: 'grid-outline' },
         'projects': { name: 'Proyectos', icon: 'briefcase-outline' },
@@ -65,6 +68,39 @@ document.addEventListener('DOMContentLoaded', () => {
     function setState(newState) {
         Object.assign(appState, newState);
         render();
+    }
+
+    // --- CAMBIO 3: Nueva función para cargar los datos del dashboard desde el backend ---
+    async function loadDashboardData() {
+        if (!appState.currentProjectId) {
+            setState({ dashboardData: null });
+            return;
+        }
+
+        setState({ isLoading: true, dashboardData: null });
+        try {
+            const token = appState.session.access_token;
+            const response = await fetch('/api/get-dashboard-summary', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ projectId: appState.currentProjectId })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'No se pudo cargar el resumen del dashboard.');
+            }
+            const data = await response.json();
+            setState({ isLoading: false, dashboardData: data });
+
+        } catch (error) {
+            console.error(error);
+            alert(error.message);
+            setState({ isLoading: false });
+        }
     }
     
     function renderProjectSelector() {
@@ -116,10 +152,15 @@ document.addEventListener('DOMContentLoaded', () => {
             if (appState.currentView !== appState.lastRenderedView) {
                 appState.moduleResults = {};
                 appState.dashboardDetailsOpen = {};
+                // Si la nueva vista es el dashboard, cargamos sus datos
+                if (appState.currentView === 'dashboard') {
+                    loadDashboardData();
+                }
             }
-
+            
+            // --- CAMBIO 4: La vista del dashboard ahora usa los datos reales de 'appState.dashboardData' ---
             const viewMap = {
-                'dashboard': () => renderDashboard(appState, mockProjectDetails[appState.currentProjectId]),
+                'dashboard': () => renderDashboard(appState, appState.dashboardData),
                 'projects': () => renderProjectsView(appState),
                 'settings': () => renderSettingsView(appState, appState.userProfile),
                 'structure': () => renderStructureView(appState),
@@ -140,7 +181,10 @@ document.addEventListener('DOMContentLoaded', () => {
             renderModals();
             if (appState.currentView === 'dashboard') {
                 exportButtonContainer.innerHTML = `<button id="export-pdf-btn" class="bg-primary hover:opacity-90 text-primary-foreground font-semibold px-4 py-2 rounded-md flex items-center gap-2"><ion-icon name="download-outline"></ion-icon> Exportar</button>`;
-                setTimeout(() => renderCharts(mockProjectDetails[appState.currentProjectId]), 0);
+                // Dibujamos los gráficos solo cuando los datos reales estén listos
+                if (appState.dashboardData) {
+                    setTimeout(() => renderCharts(appState.dashboardData), 0);
+                }
             } else { exportButtonContainer.innerHTML = ''; }
             headerTitle.textContent = views[appState.currentView]?.name || 'Fundamentos SEO';
             renderProjectSelector();
@@ -163,7 +207,9 @@ document.addEventListener('DOMContentLoaded', () => {
             if (button.id === 'project-selector-btn') {
                 setState({ isDropdownOpen: !appState.isDropdownOpen });
             } else if (button.dataset.projectId) {
+                // Al cambiar de proyecto, vamos al dashboard y cargamos los nuevos datos
                 setState({ currentProjectId: parseInt(button.dataset.projectId), isDropdownOpen: false, currentView: 'dashboard' });
+                loadDashboardData();
             }
         });
 
@@ -178,7 +224,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });      
 
         mainContent.addEventListener('click', async (e) => {
-            // Definimos todos los posibles botones que se pueden clickear
+            // ... (el resto de este listener no necesita cambios)
             const actionButton = e.target.closest('button[data-project-action-id]');
             const editButton = e.target.closest('button[data-edit-project-id]');
             const cancelButton = e.target.closest('button[data-cancel-edit-id]');
@@ -189,7 +235,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const copyQuestionsBtn = e.target.closest('#copy-questions-btn');
             const exportStrategyBtn = e.target.closest('#export-strategy-btn');
 
-            // Creamos una única cadena de decisión para manejar el clic
             if (actionButton) {
                 const projectId = parseInt(actionButton.dataset.projectActionId);
                 setState({ projectActionsOpen: { [projectId]: !appState.projectActionsOpen[projectId] } });
@@ -210,16 +255,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 let payload = {};
                 const currentProject = appState.projects.find(p => p.id === appState.currentProjectId);
 
-                // Lógica para construir el payload (sin cambios)
                 if (moduleKey === 'content-strategy' || moduleKey === 'structured-data') {
                     if (moduleKey === 'content-strategy') {
                         const keyword = document.getElementById('content-strategy-keyword-input')?.value;
                         if (!keyword) return alert('Por favor, introduce una palabra clave.');
-                        payload = { keyword, projectId: currentProject?.id }; // Pasamos el ID si existe
+                        payload = { keyword, projectId: currentProject?.id };
                     } else if (moduleKey === 'structured-data') {
                         const url = document.getElementById('schema-url-input')?.value;
                         if (!url || !url.startsWith('http')) return alert('Por favor, introduce una URL válida.');
-                        payload = { url, projectId: currentProject?.id }; // Pasamos el ID si existe
+                        payload = { url, projectId: currentProject?.id };
                     }
                 } else {
                     if (!currentProject) return alert("Selecciona un proyecto para usar esta herramienta.");
@@ -303,7 +347,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.body.removeChild(link);
             }
         });
-
+        
         mainContent.addEventListener('submit', async (e) => {
             e.preventDefault();
             const form = e.target;
@@ -375,7 +419,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         exportButtonContainer.addEventListener('click', async (e) => {
             const exportButton = e.target.closest('#export-pdf-btn');
-            if (exportButton) {
+            if (exportButton && appState.dashboardData) { // Asegurarse de que hay datos
                 const reportElement = document.getElementById('dashboard-report');
                 if (!reportElement) { return alert('No se encontró el contenido del reporte.'); }
                 exportButton.disabled = true;
@@ -515,6 +559,10 @@ document.addEventListener('DOMContentLoaded', () => {
         
         buildSidebarNav(sidebarNav, views);
         setupEventListeners();
+        // Al iniciar, cargamos los datos del dashboard para el primer proyecto
+        if (appState.currentProjectId) {
+            loadDashboardData();
+        }
         render();
     }
     
