@@ -629,7 +629,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         buildSidebarNav(sidebarNav, views);
-        setupEventListeners();
+        
         // Al iniciar, cargamos los datos del dashboard para el primer proyecto
         if (appState.currentProjectId) {
             loadDashboardData();
