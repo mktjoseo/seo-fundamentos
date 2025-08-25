@@ -22,7 +22,6 @@ export function renderSettingsView(appState, userProfile) {
             <p class="text-muted-foreground mt-2">Gestiona tu información personal, claves de API y seguridad de la cuenta.</p>
         </div>
 
-        {/* ... (La sección de Datos Personales no cambia) ... */}
         <div class="bg-card p-6 rounded-lg border border-border">
              <h3 class="text-xl font-semibold text-foreground mb-4">Datos Personales</h3>
              <form id="profile-form" class="space-y-4">

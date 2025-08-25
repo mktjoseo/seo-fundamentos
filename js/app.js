@@ -637,39 +637,36 @@ document.addEventListener('DOMContentLoaded', () => {
     function init() {
         const appLoader = document.getElementById('app-loader');
 
+        // --- LÓGICA DE INICIALIZACIÓN ---
         supabaseClient.auth.onAuthStateChange(async (event, session) => {
-            // Esta función se ejecuta al menos una vez al cargar la página.
-            
-            // Actualizamos el estado de la sesión en appState
             appState.session = session;
 
             if (session) {
-                // Si hay una sesión (usuario logueado), inicializamos la app para él
-                if (!appState.userProfile) { // Solo cargamos los datos del usuario la primera vez
-                    await initAppForUser();
+                // Si hay sesión, primero cargamos todos los datos del usuario
+                await initAppForUser();
+                // Luego, si estamos en el dashboard, cargamos sus datos específicos
+                if (appState.currentView === 'dashboard') {
+                    await loadDashboardData(); // Esperamos a que termine
                 } else {
-                    render(); // Si ya tenemos los datos, solo re-renderizamos
+                    render(); // Para otras vistas, solo renderizamos
                 }
             } else {
-                // Si NO hay sesión (usuario deslogueado), reseteamos el estado y renderizamos el login
+                // Si no hay sesión, limpiamos y renderizamos el login
                 appState.userProfile = null;
                 appState.projects = [];
                 appState.currentProjectId = null;
                 render();
             }
 
-            // Ocultamos el loader de página completa una vez que todo ha sido procesado
+            // Al final de todo, quitamos el loader principal
             if (appLoader) {
                 appLoader.classList.add('hidden');
-
             }
         });
 
-        // Los listeners de la vista de autenticación se configuran una sola vez
         setupAuthEventListeners();
         setupEventListeners();
-        // --- FIN DE LA LÓGICA CORREGIDA ---
     }
-    
+
     init();
 });
