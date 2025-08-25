@@ -176,10 +176,15 @@ document.addEventListener('DOMContentLoaded', () => {
             renderModals();
             if (appState.currentView === 'dashboard') {
                 exportButtonContainer.innerHTML = `<button id="export-pdf-btn" class="bg-primary hover:opacity-90 text-primary-foreground font-semibold px-4 py-2 rounded-md flex items-center gap-2"><ion-icon name="download-outline"></ion-icon> Exportar</button>`;
-                if (appState.dashboardData) {
+                
+                // Solo renderizamos los gráficos si la vista es nueva o si los datos acaban de llegar
+                const viewJustChanged = appState.currentView !== appState.lastRenderedView;
+                if (appState.dashboardData && viewJustChanged) {
                     setTimeout(() => renderCharts(appState.dashboardData), 0);
                 }
-            } else { exportButtonContainer.innerHTML = ''; }
+            } else { 
+                exportButtonContainer.innerHTML = ''; 
+            }
             headerTitle.textContent = views[appState.currentView]?.name || 'Fundamentos SEO';
             renderProjectSelector();
             updateActiveNav();
