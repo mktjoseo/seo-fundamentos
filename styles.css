@@ -127,3 +127,35 @@ textarea {
 
 .strategy-card:nth-child(2) { animation-delay: 0.2s; }
 .strategy-card:nth-child(3) { animation-delay: 0.4s; }
+
+/* Estilos para los Tooltips de Información */
+.tooltip {
+  position: relative;
+  display: inline-block;
+}
+
+.tooltip .tooltip-text {
+  visibility: hidden;
+  width: 280px;
+  background-color: var(--card);
+  color: var(--card-foreground);
+  text-align: left;
+  border-radius: 6px;
+  padding: 10px;
+  position: absolute;
+  z-index: 10;
+  bottom: 150%;
+  left: 50%;
+  margin-left: -140px; /* La mitad del width */
+  opacity: 0;
+  transition: opacity 0.3s;
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.tooltip:hover .tooltip-text {
+  visibility: visible;
+  opacity: 1;
+}

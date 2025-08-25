@@ -36,6 +36,7 @@ document.addEventListener('DOMContentLoaded', () => {
         projectToDelete: null, 
         projectActionsOpen: {},
         dashboardData: null, 
+        isDeleteAccountModalOpen: false, 
     };
     
     const views = {
@@ -122,14 +123,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderModals() {
-        let deleteModalHTML = '';
+        let modalHTML = '';
         if (appState.isDeleteModalOpen && appState.projectToDelete) {
             const project = appState.projects.find(p => p.id === appState.projectToDelete);
             if(project) {
-                deleteModalHTML = `<div class="modal-overlay open"><div class="bg-card rounded-lg shadow-xl p-6 w-full max-w-md border border-border"><h3 class="text-lg font-bold text-destructive flex items-center gap-2"><ion-icon name="warning-outline"></ion-icon>Confirmar Eliminación</h3><p class="text-muted-foreground mt-2">¿Estás seguro de que quieres eliminar el proyecto <strong class="text-foreground">${project.name}</strong>? Esta acción no se puede deshacer.</p><div class="mt-6 flex justify-end gap-3"><button id="cancel-delete-btn" class="bg-muted text-foreground px-4 py-2 rounded-md hover:opacity-80">Cancelar</button><button id="confirm-delete-btn" class="bg-destructive text-primary-foreground px-4 py-2 rounded-md hover:opacity-80">Confirmar Borrado</button></div></div></div>`;
+                modalHTML = `<div class="modal-overlay open"><div class="bg-card rounded-lg shadow-xl p-6 w-full max-w-md border border-border"><h3 class="text-lg font-bold text-destructive flex items-center gap-2"><ion-icon name="warning-outline"></ion-icon>Confirmar Eliminación</h3><p class="text-muted-foreground mt-2">¿Estás seguro de que quieres eliminar el proyecto <strong class="text-foreground">${project.name}</strong>? Esta acción no se puede deshacer.</p><div class="mt-6 flex justify-end gap-3"><button id="cancel-delete-btn" class="bg-muted text-foreground px-4 py-2 rounded-md hover:opacity-80">Cancelar</button><button id="confirm-delete-btn" class="bg-destructive text-primary-foreground px-4 py-2 rounded-md hover:opacity-80">Confirmar Borrado</button></div></div></div>`;
             }
+        } else if (appState.isDeleteAccountModalOpen) {
+            modalHTML = `<div class="modal-overlay open"><div class="bg-card rounded-lg shadow-xl p-6 w-full max-w-md border border-destructive"><h3 class="text-lg font-bold text-destructive flex items-center gap-2"><ion-icon name="warning-outline"></ion-icon>¿Estás absolutamente seguro?</h3><p class="text-muted-foreground mt-2">Esta acción es irreversible. Se eliminarán permanentemente tu cuenta, perfil, proyectos y todos los análisis asociados. Esta información no podrá ser recuperada.</p><p class="mt-4 text-muted-foreground">Por favor, escribe <strong class="text-foreground">${appState.session.user.email}</strong> para confirmar.</p><input id="delete-confirm-input" type="text" class="w-full bg-background border border-border rounded-md px-3 py-2 mt-2 focus:outline-none focus:ring-2 focus:ring-destructive"><div class="mt-6 flex justify-end gap-3"><button id="cancel-delete-account-btn" class="bg-muted text-foreground px-4 py-2 rounded-md hover:opacity-80">Cancelar</button><button id="confirm-delete-account-btn" class="bg-destructive text-primary-foreground px-4 py-2 rounded-md hover:opacity-80 opacity-50 cursor-not-allowed" disabled>Borrado Definitivo</button></div></div></div>`;
         }
-        modalContainer.innerHTML = deleteModalHTML;
+        modalContainer.innerHTML = modalHTML;
     }
     
     function updateActiveNav() {
@@ -229,6 +232,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });      
 
         mainContent.addEventListener('click', async (e) => {
+            const resetButton = e.target.closest('#reset-password-btn');
+            const deleteAccountBtn = e.target.closest('#delete-account-btn');
             const actionButton = e.target.closest('button[data-project-action-id]');
             const editButton = e.target.closest('button[data-edit-project-id]');
             const cancelButton = e.target.closest('button[data-cancel-edit-id]');
@@ -239,7 +244,22 @@ document.addEventListener('DOMContentLoaded', () => {
             const copyQuestionsBtn = e.target.closest('#copy-questions-btn');
             const exportStrategyBtn = e.target.closest('#export-strategy-btn');
 
-            if (actionButton) {
+            if (resetButton) {
+                resetButton.disabled = true;
+                resetButton.textContent = 'Enviando...';
+                const { error } = await supabaseClient.auth.resetPasswordForEmail(appState.session.user.email, {
+                    redirectTo: window.location.origin,
+                });
+                if (error) {
+                    alert('Error al enviar el enlace: ' + error.message);
+                } else {
+                    alert('¡Enlace enviado! Revisa tu correo electrónico.');
+                }
+                resetButton.disabled = false;
+                resetButton.textContent = 'Enviar Enlace';
+            } else if (deleteAccountBtn) {
+                setState({ isDeleteAccountModalOpen: true });
+            } else if (actionButton) {
                 const projectId = parseInt(actionButton.dataset.projectActionId);
                 setState({ projectActionsOpen: { [projectId]: !appState.projectActionsOpen[projectId] } });
             } else if (editButton) {
@@ -351,7 +371,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.body.removeChild(link);
             }
         });
-        
+
         mainContent.addEventListener('submit', async (e) => {
             e.preventDefault();
             const form = e.target;
@@ -376,9 +396,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (geminiInput.value) updates.gemini_api_key = geminiInput.value;
                 if (Object.keys(updates).length > 0) {
                     const { data, error } = await supabaseClient.from('profiles').update(updates).eq('id', appState.session.user.id).select().single();
-                    if (error) alert('Error al guardar las claves: ' + error.message);
-                    else { alert('¡Claves guardadas con éxito!'); form.reset(); setState({ userProfile: data }); }
-                } else { alert('No has introducido ninguna clave nueva para guardar.'); }
+                    if (error) {
+                        alert('Error al guardar las claves: ' + error.message);
+                    } else {
+                        alert('¡Claves guardadas con éxito!');
+                        form.reset();
+                        setState({ userProfile: data });
+                    }
+                } else {
+                    alert('No has introducido ninguna clave nueva para guardar.');
+                }
             } else if (form.id === 'add-project-form') {
                 const nameInput = form.querySelector('#project-name');
                 const urlInput = form.querySelector('#project-url');
@@ -399,7 +426,18 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         mainContent.addEventListener('input', e => {
-            if (e.target.id === 'project-search-input') setState({ projectSearchQuery: e.target.value });
+            if (e.target.id === 'project-search-input') {
+                setState({ projectSearchQuery: e.target.value });
+            } else if (e.target.id === 'delete-confirm-input') {
+                const confirmBtn = document.getElementById('confirm-delete-account-btn');
+                if (e.target.value === appState.session.user.email) {
+                    confirmBtn.disabled = false;
+                    confirmBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                } else {
+                    confirmBtn.disabled = true;
+                    confirmBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                }
+            }
         });
 
         modalContainer.addEventListener('click', async (e) => {
@@ -419,8 +457,21 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
                 }
             }
+            if (e.target.closest('#cancel-delete-account-btn')) {
+                setState({ isDeleteAccountModalOpen: false });
+            }
+            if (e.target.closest('#confirm-delete-account-btn') && !e.target.closest('#confirm-delete-account-btn').disabled) {
+                // IMPORTANTE: Esto requiere una función RPC 'delete_user_account' en tu backend de Supabase.
+                const { error } = await supabaseClient.rpc('delete_user_account'); 
+                if (error) {
+                    alert('Error al borrar la cuenta: ' + error.message);
+                } else {
+                    alert('Tu cuenta ha sido eliminada con éxito.');
+                    await supabaseClient.auth.signOut();
+                }
+            }
         });
-
+        
         exportButtonContainer.addEventListener('click', async (e) => {
             const exportButton = e.target.closest('#export-pdf-btn');
             if (exportButton && appState.dashboardData) { // Asegurarse de que hay datos
