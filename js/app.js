@@ -178,11 +178,20 @@ document.addEventListener('DOMContentLoaded', () => {
             mainContent.innerHTML = renderFunction();
             renderUserProfile(userProfileContainer, appState, userProfileData);
             renderModals();
+            // --- LÓGICA DE RENDERIZADO DE GRÁFICOS CORREGIDA ---
             if (appState.currentView === 'dashboard') {
                 exportButtonContainer.innerHTML = `<button id="export-pdf-btn" class="bg-primary hover:opacity-90 text-primary-foreground font-semibold px-4 py-2 rounded-md flex items-center gap-2"><ion-icon name="download-outline"></ion-icon> Exportar</button>`;
+                
+                // Si estamos en el dashboard y los datos existen, nos aseguramos de que los gráficos se dibujen.
+                if (appState.dashboardData) {
+                    // Usamos setTimeout para asegurar que el DOM se haya actualizado antes de dibujar.
+                    setTimeout(() => renderCharts(appState.dashboardData), 0);
+                }
             } else { 
                 exportButtonContainer.innerHTML = ''; 
             }
+            // --- FIN DE LA LÓGICA DE RENDERIZADO DE GRÁFICOS CORREGIDA ---
+
             headerTitle.textContent = views[appState.currentView]?.name || 'Fundamentos SEO';
             renderProjectSelector();
             updateActiveNav();

@@ -32,9 +32,23 @@ function renderStructureView(appState) {
            </button>`;
     // --- FIN DE LA LÓGICA MODIFICADA ---
 
+     // --- BLOQUE inputHTML MODIFICADO CON TOOLTIP Y MEJOR DESCRIPCIÓN ---
     const inputHTML = `
-        <h3 class="text-2xl font-bold text-foreground">Parámetros de Análisis</h3>
-        <p class="text-muted-foreground mt-2">Introduce la palabra clave principal que quieres atacar y el texto completo de tu artículo.</p>
+        <div class="flex items-center gap-2">
+            <h3 class="text-2xl font-bold text-foreground">Estructura y Relevancia</h3>
+            <div class="tooltip">
+                <ion-icon name="information-circle-outline" class="text-muted-foreground text-xl cursor-pointer"></ion-icon>
+                <span class="tooltip-text">
+                    <b>¿Cómo funciona?</b><br>
+                    1. Busca en Google con tu keyword (vía <b>Serper</b>).<br>
+                    2. Extrae los temas clave de los 5 primeros resultados.<br>
+                    3. Compara tu artículo contra esos temas usando la IA de <b>Gemini</b> para calcular una puntuación de relevancia.
+                </span>
+            </div>
+        </div>
+        <p class="text-muted-foreground mt-2">
+            Asegurarse de que tu contenido responde a la "intención de búsqueda" es crucial para un buen posicionamiento. Esta herramienta te dice qué tan bien alineado está tu artículo con lo que Google considera relevante para una keyword, y te muestra qué temas te faltan por cubrir.
+        </p>
         <div class="space-y-6 mt-6">
             <div>
                 <label for="structure-keyword-input" class="block text-sm font-bold text-muted-foreground mb-2">Palabra Clave Objetivo</label>
@@ -127,9 +141,23 @@ function renderLinkingView(appState) {
         : `<button data-module="linking" class="bg-primary hover:opacity-90 text-primary-foreground font-semibold px-6 py-2.5 rounded-md">Calcular Profundidad</button>`;
     // --- FIN DE LA LÓGICA AÑADIDA ---
 
+    // --- BLOQUE inputHTML MODIFICADO CON TOOLTIP Y MEJOR DESCRIPCIÓN ---
     const inputHTML = `
-        <h3 class="text-2xl font-bold text-foreground">Análisis de Profundidad de Enlazado</h3>
-        <p class="text-muted-foreground mt-2">Mide cuántos clics se necesitan para llegar a tus páginas clave desde la página de inicio.</p>
+        <div class="flex items-center gap-2">
+            <h3 class="text-2xl font-bold text-foreground">Profundidad de Enlazado</h3>
+            <div class="tooltip">
+                <ion-icon name="information-circle-outline" class="text-muted-foreground text-xl cursor-pointer"></ion-icon>
+                <span class="tooltip-text">
+                    <b>¿Cómo funciona?</b><br>
+                    1. Inicia un rastreo desde tu página de inicio.<br>
+                    2. Sigue todos los enlaces internos usando <b>ScraperAPI</b> para mapear tu sitio.<br>
+                    3. Calcula la ruta de clics más corta hasta las URLs clave que especificaste.
+                </span>
+            </div>
+        </div>
+        <p class="text-muted-foreground mt-2">
+            Las páginas más importantes de tu sitio deben ser fácilmente accesibles para los usuarios y los motores de búsqueda. Una "profundidad" alta (muchos clics) puede indicar a Google que una página es menos importante, afectando su rastreo y posicionamiento. Lo ideal es que tus páginas clave no estén a más de 3 clics de la home.
+        </p>
         <div class="mt-6 space-y-4">
             <div>
                 <label class="block text-sm font-bold text-muted-foreground mb-2">Página de Inicio (Punto de Partida)</label>
@@ -231,9 +259,23 @@ function renderZombiesView(appState) {
         : `<button data-module="zombie-urls" class="bg-primary hover:opacity-90 text-primary-foreground font-semibold px-6 py-2.5 rounded-md">Buscar URLs Zombie</button>`;
     // --- FIN DE LA LÓGICA AÑADIDA ---
 
+    // --- BLOQUE inputHTML MODIFICADO CON TOOLTIP Y MEJOR DESCRIPCIÓN ---
     const inputHTML = `
-        <h3 class="text-2xl font-bold text-foreground">Análisis de URLs Zombie</h3>
-        <p class="text-muted-foreground mt-2">Encuentra páginas con problemas de indexación o de bajo valor.</p>
+        <div class="flex items-center gap-2">
+            <h3 class="text-2xl font-bold text-foreground">Análisis de URLs Zombie</h3>
+            <div class="tooltip">
+                <ion-icon name="information-circle-outline" class="text-muted-foreground text-xl cursor-pointer"></ion-icon>
+                <span class="tooltip-text">
+                    <b>¿Cómo funciona?</b><br>
+                    1. Lee la lista completa de URLs de tu <b>sitemap.xml</b>.<br>
+                    2. Para cada URL, realiza una búsqueda "site:tu-url" en Google vía <b>Serper</b>.<br>
+                    3. Si Google no devuelve ningún resultado, la página se marca como posible "zombie".
+                </span>
+            </div>
+        </div>
+        <p class="text-muted-foreground mt-2">
+            Las "URLs Zombie" son páginas que existen en tu sitio pero que Google no ha indexado. Estas páginas consumen tu presupuesto de rastreo sin aportar ningún valor SEO. Identificarlas y corregirlas (mejorándolas, redireccionándolas o eliminándolas) ayuda a Google a centrarse en el contenido que realmente importa.
+        </p>
         <div class="mt-6 space-y-4">
             <div>
                 <label class="block text-sm font-bold text-muted-foreground mb-2">Dominio a Analizar</label>
@@ -383,18 +425,36 @@ function renderContentStrategyView(appState) {
         : `<button data-module="content-strategy" class="bg-primary hover:opacity-90 text-primary-foreground font-semibold px-6 py-2.5 rounded-md">Analizar Estrategia</button>`;
     // --- FIN DE LA LÓGICA AÑADIDA ---
 
+// --- BLOQUE inputHTML MODIFICADO CON TOOLTIP Y MEJOR DESCRIPCIÓN ---
     const inputHTML = `
-        <h3 class="text-2xl font-bold text-foreground">Generador de Estrategia de Contenido</h3>
-        <div class="text-muted-foreground mt-2 space-y-2 text-sm">
-             <p>Actúa como un estratega SEO automatizado para descubrir oportunidades de contenido únicas.</p>
+        <div class="flex items-center gap-2">
+            <h3 class="text-2xl font-bold text-foreground">Auditor de Datos Estructurados</h3>
+             <div class="tooltip">
+                <ion-icon name="information-circle-outline" class="text-muted-foreground text-xl cursor-pointer"></ion-icon>
+                <span class="tooltip-text">
+                    <b>¿Cómo funciona?</b><br>
+                    1. Extrae el código de tu URL con <b>ScraperAPI</b>.<br>
+                    2. Busca y aísla el script de Schema (JSON-LD).<br>
+                    3. La IA de <b>Gemini</b> valida el código en busca de errores y da recomendaciones.<br>
+                    4. Revisa la competencia con <b>Serper</b> para sugerir tipos de Schema que podrías añadir.
+                </span>
+            </div>
         </div>
-        <div class="mt-6">
-            <label for="content-strategy-keyword-input" class="block text-sm font-bold text-muted-foreground mb-2">Palabra Clave Principal del Nicho</label>
-            <div class="relative">
-                <ion-icon name="search-circle-outline" class="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"></ion-icon>
-                <input id="content-strategy-keyword-input" type="text"
-                       class="w-full bg-background border border-border rounded-md pl-10 pr-4 py-2 focus:outline-none focus:ring-2 focus:ring-ring"
-                       placeholder="ej: guitarra eléctrica para principiantes">
+        <p class="text-muted-foreground mt-2">
+            Los datos estructurados (Schema) son un código que ayuda a Google a entender de qué trata tu contenido a un nivel más profundo (ej. "esto es una receta", "esto es un producto"). Implementarlo correctamente puede hacer que tus páginas aparezcan con "fragmentos enriquecidos" (estrellas, precios, etc.) en los resultados de búsqueda, mejorando la visibilidad y el CTR.
+        </p>
+        <div class="mt-6 space-y-4">
+            <div>
+                <label for="schema-path-input" class="block text-sm font-bold text-muted-foreground mb-2">URL de la Página a Analizar</label>
+                <div class="flex items-center">
+                    <span class="inline-flex items-center px-3 h-10 rounded-l-md border border-r-0 border-border bg-muted text-muted-foreground text-sm">
+                        ${domainPrefix}
+                    </span>
+                    <input id="schema-path-input" type="text"
+                           class="w-full h-10 bg-background border border-border rounded-r-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ring"
+                           placeholder="/ruta/de/tu/pagina"
+                           ${!currentProject ? 'disabled' : ''}>
+                </div>
             </div>
         </div>
         <div class="text-right mt-6">
