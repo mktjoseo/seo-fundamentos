@@ -534,6 +534,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 submitButton.textContent = 'Iniciar Sesión';
             }
             else if (formId === 'register-form') {
+                const termsCheckbox = e.target.querySelector('#terms-checkbox');
+                
+                // --- LÓGICA DE VALIDACIÓN AÑADIDA ---
+                if (!termsCheckbox.checked) {
+                    messageDiv.textContent = 'Debes aceptar los términos y condiciones para continuar.';
+                    messageDiv.className = 'text-destructive font-semibold';
+                    submitButton.disabled = false;
+                    submitButton.textContent = 'Crear Cuenta';
+                    return; // Detiene la ejecución
+                }
+                
                 const fullName = e.target.querySelector('#register-name').value;
                 const { error } = await supabaseClient.auth.signUp({ 
                     email, 

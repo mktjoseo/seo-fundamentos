@@ -41,7 +41,7 @@ export function renderAuthView() {
                 </div>
 
                 <div id="register-form-container" class="hidden">
-                     <form id="register-form" class="space-y-6">
+                    <form id="register-form" class="space-y-6">
                         <div>
                             <label for="register-name" class="block text-sm font-bold text-muted-foreground mb-2">Nombre Completo</label>
                             <input id="register-name" type="text" required class="w-full bg-background border border-border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ring">
@@ -59,11 +59,21 @@ export function renderAuthView() {
                                 </button>
                             </div>
                         </div>
+
+                        <div class="flex items-start space-x-3">
+                            <input id="terms-checkbox" type="checkbox" required class="mt-1 h-4 w-4 rounded border-border text-primary focus:ring-primary">
+                            <label for="terms-checkbox" class="text-sm text-muted-foreground">
+                                He leído y acepto los 
+                                <a href="/terminos-y-condiciones.html" target="_blank" class="font-medium text-primary hover:underline">Términos y Condiciones</a> 
+                                y la 
+                                <a href="/politica-de-privacidad.html" target="_blank" class="font-medium text-primary hover:underline">Política de Privacidad</a>.
+                            </label>
+                        </div>
                         <button type="submit" class="w-full bg-primary text-primary-foreground font-semibold py-3 rounded-md hover:opacity-90 transition-opacity flex items-center justify-center gap-2">
                            Crear Cuenta
                         </button>
                     </form>
-                    <p class="text-center text-sm text-muted-foreground mt-6">
+                <p class="text-center text-sm text-muted-foreground mt-6">
                         ¿Ya tienes una cuenta? 
                         <button id="show-login-btn" class="font-semibold text-primary hover:underline">Inicia sesión</button>
                     </p>

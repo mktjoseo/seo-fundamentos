@@ -53,7 +53,7 @@ export function renderSettingsView(appState, userProfile) {
             </div>
             <p class="text-muted-foreground text-sm mb-6">Tus claves no se volverán a mostrar. Si necesitas cambiarlas, simplemente introduce una nueva.</p>
             <form id="api-keys-form" class="space-y-6">
-                 {/* ... (Inputs de las APIs como antes) ... */}
+                
                  <div class="grid grid-cols-3 items-center gap-4">
                      <label for="serper-key" class="col-span-1 text-sm font-bold text-muted-foreground">Serper API Key</label>
                      <div class="col-span-2 relative">
