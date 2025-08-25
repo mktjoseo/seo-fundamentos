@@ -52,7 +52,6 @@ export function renderSettingsView(appState, userProfile) {
             </div>
             <p class="text-muted-foreground text-sm mb-6">Tus claves no se volverán a mostrar. Si necesitas cambiarlas, simplemente introduce una nueva.</p>
             <form id="api-keys-form" class="space-y-6">
-                
                  <div class="grid grid-cols-3 items-center gap-4">
                      <label for="serper-key" class="col-span-1 text-sm font-bold text-muted-foreground">Serper API Key</label>
                      <div class="col-span-2 relative">
@@ -91,6 +90,36 @@ export function renderSettingsView(appState, userProfile) {
              </div>
         </div>
 
+        <div class="bg-card p-6 rounded-lg border border-border">
+             <h3 class="text-xl font-semibold text-foreground mb-4">Guía para Obtener API Keys</h3>
+             <p class="text-muted-foreground text-sm mb-6">Todas las herramientas externas que utilizamos ofrecen un plan gratuito suficiente para empezar.</p>
+             <div class="space-y-4">
+                <div class="flex items-start gap-4">
+                    <ion-icon name="search-circle-outline" class="text-2xl text-primary mt-1"></ion-icon>
+                    <div>
+                        <h4 class="font-semibold text-foreground">Serper API Key</h4>
+                        <p class="text-sm text-muted-foreground">Se usa para obtener resultados de búsqueda de Google de forma rápida. El plan gratuito incluye miles de búsquedas al mes.</p>
+                        <a href="https://serper.dev/" target="_blank" class="text-sm text-primary hover:underline font-semibold">Obtener clave en Serper.dev <ion-icon name="open-outline" class="inline-block"></ion-icon></a>
+                    </div>
+                </div>
+                <div class="flex items-start gap-4">
+                     <ion-icon name="cloud-download-outline" class="text-2xl text-primary mt-1"></ion-icon>
+                    <div>
+                        <h4 class="font-semibold text-foreground">ScraperAPI Key</h4>
+                        <p class="text-sm text-muted-foreground">Permite extraer el contenido HTML de las páginas web sin ser bloqueado. El plan gratuito ofrece cientos de créditos.</p>
+                        <a href="https://www.scraperapi.com/" target="_blank" class="text-sm text-primary hover:underline font-semibold">Obtener clave en ScraperAPI.com <ion-icon name="open-outline" class="inline-block"></ion-icon></a>
+                    </div>
+                </div>
+                 <div class="flex items-start gap-4">
+                     <ion-icon name="sparkles-outline" class="text-2xl text-primary mt-1"></ion-icon>
+                    <div>
+                        <h4 class="font-semibold text-foreground">Gemini API Key</h4>
+                        <p class="text-sm text-muted-foreground">Es la IA de Google que usamos para analizar contenido, validar schemas y generar estrategias. Se obtiene desde Google AI Studio.</p>
+                        <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-sm text-primary hover:underline font-semibold">Obtener clave en Google AI Studio <ion-icon name="open-outline" class="inline-block"></ion-icon></a>
+                    </div>
+                </div>
+             </div>
+        </div>
         <div class="bg-card p-6 rounded-lg border border-destructive">
             <div class="flex items-center gap-2 mb-4">
                  <h3 class="text-xl font-semibold text-destructive">Zona de Peligro</h3>

@@ -22,8 +22,8 @@ function renderProcessConsole(logMessages) {
 function renderStructureView(appState) {
     // --- LÓGICA DEL BOTÓN MODIFICADA ---
     const buttonHTML = appState.isLoading
-        ? `<button disabled class="bg-primary/80 text-primary-foreground font-semibold px-8 py-3 rounded-md flex items-center gap-2 inline-flex cursor-not-allowed">
-            <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-primary-foreground"></div>
+        ? `<button disabled class="bg-muted text-muted-foreground font-semibold px-8 py-3 rounded-md flex items-center gap-2 inline-flex cursor-not-allowed">
+            <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-muted-foreground"></div>
             Analizando...
            </button>`
         : `<button data-module="structure" class="bg-primary hover:opacity-90 text-primary-foreground font-semibold px-8 py-3 rounded-md flex items-center gap-2 inline-flex">
@@ -120,8 +120,8 @@ function renderLinkingView(appState) {
 
     // --- LÓGICA DEL BOTÓN AÑADIDA ---
     const buttonHTML = appState.isLoading
-        ? `<button disabled class="bg-primary/80 text-primary-foreground font-semibold px-6 py-2.5 rounded-md flex items-center gap-2 inline-flex cursor-not-allowed">
-            <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-primary-foreground"></div>
+        ? `<button disabled class="bg-muted text-muted-foreground font-semibold px-8 py-3 rounded-md flex items-center gap-2 inline-flex cursor-not-allowed">
+            <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-muted-foreground"></div>
             Calculando...
            </button>`
         : `<button data-module="linking" class="bg-primary hover:opacity-90 text-primary-foreground font-semibold px-6 py-2.5 rounded-md">Calcular Profundidad</button>`;
@@ -224,8 +224,8 @@ function renderZombiesView(appState) {
 
     // --- LÓGICA DEL BOTÓN AÑADIDA ---
     const buttonHTML = appState.isLoading
-        ? `<button disabled class="bg-primary/80 text-primary-foreground font-semibold px-6 py-2.5 rounded-md flex items-center gap-2 inline-flex cursor-not-allowed">
-            <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-primary-foreground"></div>
+        ? `<button disabled class="bg-muted text-muted-foreground font-semibold px-8 py-3 rounded-md flex items-center gap-2 inline-flex cursor-not-allowed">
+            <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-muted-foreground"></div>
             Buscando...
            </button>`
         : `<button data-module="zombie-urls" class="bg-primary hover:opacity-90 text-primary-foreground font-semibold px-6 py-2.5 rounded-md">Buscar URLs Zombie</button>`;
@@ -297,8 +297,8 @@ function renderSchemaView(appState) {
     const domainPrefix = currentProject ? `https://${currentProject.url}` : 'https://selecciona-un-proyecto';
     
     const buttonHTML = appState.isLoading
-        ? `<button disabled class="bg-primary/80 text-primary-foreground font-semibold px-6 py-2.5 rounded-md flex items-center gap-2 inline-flex cursor-not-allowed">
-            <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-primary-foreground"></div>
+        ? `<button disabled class="bg-muted text-muted-foreground font-semibold px-8 py-3 rounded-md flex items-center gap-2 inline-flex cursor-not-allowed">
+            <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-muted-foreground"></div>
             Auditando...
            </button>`
         : `<button data-module="structured-data" class="bg-primary hover:opacity-90 text-primary-foreground font-semibold px-6 py-2.5 rounded-md">Auditar Schema</button>`;
@@ -376,8 +376,8 @@ function renderSchemaView(appState) {
 function renderContentStrategyView(appState) {
     // --- LÓGICA DEL BOTÓN AÑADIDA ---
     const buttonHTML = appState.isLoading
-        ? `<button disabled class="bg-primary/80 text-primary-foreground font-semibold px-6 py-2.5 rounded-md flex items-center gap-2 inline-flex cursor-not-allowed">
-            <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-primary-foreground"></div>
+        ? `<button disabled class="bg-muted text-muted-foreground font-semibold px-8 py-3 rounded-md flex items-center gap-2 inline-flex cursor-not-allowed">
+            <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-muted-foreground"></div>
             Analizando...
            </button>`
         : `<button data-module="content-strategy" class="bg-primary hover:opacity-90 text-primary-foreground font-semibold px-6 py-2.5 rounded-md">Analizar Estrategia</button>`;
