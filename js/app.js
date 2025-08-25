@@ -533,9 +533,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (error) {
                     messageDiv.textContent = `Error: ${error.message}`;
                     messageDiv.className = 'text-destructive font-semibold';
-                }
+                }                
+                // Se mueven estas dos líneas fuera del if para que se ejecuten siempre
                 submitButton.disabled = false;
-                submitButton.textContent = 'Iniciar Sesión';
+                submitButton.textContent = 'Iniciar Sesión';                
             }
             else if (formId === 'register-form') {
                 const termsCheckbox = e.target.querySelector('#terms-checkbox');
@@ -638,24 +639,31 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     function init() {
+        const appLoader = document.getElementById('app-loader');
+
         supabaseClient.auth.onAuthStateChange(async (event, session) => {
-            // CORRECCIÓN 2: El bucle se origina aquí.
-            // Esta función se llama MÚLTIPLES VECES por Supabase.
-            // Solo debemos actuar en el PRIMER cambio de estado real (login o logout)
             const isLoggedIn = session?.access_token;
             const wasLoggedIn = appState.session?.access_token;
-
+            
             if (isLoggedIn !== wasLoggedIn) {
                 setState({ session: session }, false); // Guardamos la sesión sin re-renderizar
                 if (session) {
                     await initAppForUser();
                 } else {
                     setState({ userProfile: null, projects: [], currentProjectId: null });
+                    render(); // Renderiza la vista de login si no hay sesión
                 }
             }
+            
+            // Una vez que se procesa el estado de autenticación, ocultamos el loader
+            if (appLoader) {
+                appLoader.classList.add('hidden');
+            }
+            // Hacemos visibles los contenedores principales
+            authContainer.classList.remove('hidden');
         });
       setupAuthEventListeners();
-      render();
+      // NO llamamos a render() aquí. onAuthStateChange se encarga.
     }
     
     init();

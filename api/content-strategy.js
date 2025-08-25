@@ -95,7 +95,11 @@ export default async function handler(request, response) {
     const analysisResult = JSON.parse(jsonResponseText);
     activityLog.push("¡Análisis completado con éxito!");
     
-    const dataToReturn = { ...analysisResult, activityLog };
+    const dataToReturn = { 
+        keyword: keyword, // <-- Se añade la keyword aquí
+        ...analysisResult, 
+        activityLog 
+    };
 
     if (projectId) {
         await supabase.from('analisis_resultados').insert({

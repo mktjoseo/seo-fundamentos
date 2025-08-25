@@ -6,16 +6,26 @@ function renderDashboard(appState, projectDetails) {
     // --- LÓGICA PARA RENDERIZAR OPORTUNIDADES DE CONTENIDO AÑADIDA ---
     let opportunitiesHTML = '';
     if (projectDetails.contentOpportunities && projectDetails.contentOpportunities.length > 0) {
+        // --- LÓGICA DE TARJETAS DE OPORTUNIDAD MODIFICADA ---
         const opportunityCards = projectDetails.contentOpportunities.map(opp => {
             const competitorsCount = opp.competitors?.length || 0;
+            // Obtenemos la oportunidad del primer competidor como la sugerencia principal
+            const mainOpportunity = opp.competitors?.[0]?.opportunity || 'No se generó una oportunidad específica.';
+
             return `
-            <div class="bg-card p-4 rounded-lg border border-border transition hover:border-primary">
-                <p class="font-semibold text-foreground">${opp.keyword || 'Keyword no encontrada'}</p>
-                <p class="text-sm text-muted-foreground">${competitorsCount} competidores analizados</p>
+            <div class="bg-card p-4 rounded-lg border border-border flex flex-col gap-3">
+                <div>
+                    <p class="font-semibold text-foreground">${opp.keyword || 'Keyword no encontrada'}</p>
+                    <p class="text-sm text-muted-foreground">${competitorsCount} competidores analizados</p>
+                </div>
+                <div class="text-sm text-foreground bg-secondary/10 p-3 rounded-md flex items-start gap-2">
+                    <ion-icon name="bulb-outline" class="text-secondary text-lg flex-shrink-0 mt-0.5"></ion-icon>
+                    <span>${mainOpportunity}</span>
+                </div>
             </div>
             `;
         }).join('');
-
+        
         opportunitiesHTML = `
             <div class="mt-8">
                 <h3 class="text-xl font-bold mb-4 text-foreground">Últimas Oportunidades de Contenido</h3>
