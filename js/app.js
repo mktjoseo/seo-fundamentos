@@ -641,29 +641,38 @@ document.addEventListener('DOMContentLoaded', () => {
     function init() {
         const appLoader = document.getElementById('app-loader');
 
+        // --- LÓGICA DE INICIALIZACIÓN CORREGIDA ---
         supabaseClient.auth.onAuthStateChange(async (event, session) => {
-            const isLoggedIn = session?.access_token;
-            const wasLoggedIn = appState.session?.access_token;
+            // Esta función se ejecuta al menos una vez al cargar la página.
             
-            if (isLoggedIn !== wasLoggedIn) {
-                setState({ session: session }, false); // Guardamos la sesión sin re-renderizar
-                if (session) {
+            // Actualizamos el estado de la sesión en appState
+            appState.session = session;
+
+            if (session) {
+                // Si hay una sesión (usuario logueado), inicializamos la app para él
+                if (!appState.userProfile) { // Solo cargamos los datos del usuario la primera vez
                     await initAppForUser();
                 } else {
-                    setState({ userProfile: null, projects: [], currentProjectId: null });
-                    render(); // Renderiza la vista de login si no hay sesión
+                    render(); // Si ya tenemos los datos, solo re-renderizamos
                 }
+            } else {
+                // Si NO hay sesión (usuario deslogueado), reseteamos el estado y renderizamos el login
+                appState.userProfile = null;
+                appState.projects = [];
+                appState.currentProjectId = null;
+                render();
             }
-            
-            // Una vez que se procesa el estado de autenticación, ocultamos el loader
+
+            // Ocultamos el loader de página completa una vez que todo ha sido procesado
             if (appLoader) {
                 appLoader.classList.add('hidden');
+
             }
-            // Hacemos visibles los contenedores principales
-            authContainer.classList.remove('hidden');
         });
-      setupAuthEventListeners();
-      // NO llamamos a render() aquí. onAuthStateChange se encarga.
+
+        // Los listeners de la vista de autenticación se configuran una sola vez
+        setupAuthEventListeners();
+        // --- FIN DE LA LÓGICA CORREGIDA ---
     }
     
     init();
