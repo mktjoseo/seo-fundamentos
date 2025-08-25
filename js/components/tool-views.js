@@ -346,14 +346,25 @@ function renderSchemaView(appState) {
         : `<button data-module="structured-data" class="bg-primary hover:opacity-90 text-primary-foreground font-semibold px-6 py-2.5 rounded-md">Auditar Schema</button>`;
 
         const inputHTML = `
-        <h3 class="text-2xl font-bold text-foreground">Auditor de Datos Estructurados (Schema)</h3>
+        <div class="flex items-center gap-2">
+            <h3 class="text-2xl font-bold text-foreground">Auditor de Datos Estructurados</h3>
+             <div class="tooltip">
+                <ion-icon name="information-circle-outline" class="text-muted-foreground text-xl cursor-pointer"></ion-icon>
+                <span class="tooltip-text">
+                    <b>¿Cómo funciona?</b><br>
+                    1. Extrae el código de tu URL con <b>ScraperAPI</b>.<br>
+                    2. Busca y aísla el script de Schema (JSON-LD).<br>
+                    3. La IA de <b>Gemini</b> valida el código en busca de errores y da recomendaciones.<br>
+                    4. Revisa la competencia con <b>Serper</b> para sugerir tipos de Schema que podrías añadir.
+                </span>
+            </div>
+        </div>
         <p class="text-muted-foreground mt-2">
-            Esta herramienta inteligente valida el código Schema (JSON-LD) de una URL de tu proyecto.
+            Los datos estructurados (Schema) son un código que ayuda a Google a entender de qué trata tu contenido a un nivel más profundo (ej. "esto es una receta", "esto es un producto"). Implementarlo correctamente puede hacer que tus páginas aparezcan con "fragmentos enriquecidos" (estrellas, precios, etc.) en los resultados de búsqueda, mejorando la visibilidad y el CTR.
         </p>
         <div class="mt-6 space-y-4">
             <div>
-                <label for="schema-url-input" class="block text-sm font-bold text-muted-foreground mb-2">URL de la Página a Analizar</label>
-                
+                <label for="schema-path-input" class="block text-sm font-bold text-muted-foreground mb-2">URL de la Página a Analizar</label>
                 <div class="flex items-center">
                     <span class="inline-flex items-center px-3 h-10 rounded-l-md border border-r-0 border-border bg-muted text-muted-foreground text-sm">
                         ${domainPrefix}
@@ -428,33 +439,27 @@ function renderContentStrategyView(appState) {
 // --- BLOQUE inputHTML MODIFICADO CON TOOLTIP Y MEJOR DESCRIPCIÓN ---
     const inputHTML = `
         <div class="flex items-center gap-2">
-            <h3 class="text-2xl font-bold text-foreground">Auditor de Datos Estructurados</h3>
+            <h3 class="text-2xl font-bold text-foreground">Generador de Estrategia de Contenido</h3>
              <div class="tooltip">
                 <ion-icon name="information-circle-outline" class="text-muted-foreground text-xl cursor-pointer"></ion-icon>
                 <span class="tooltip-text">
                     <b>¿Cómo funciona?</b><br>
-                    1. Extrae el código de tu URL con <b>ScraperAPI</b>.<br>
-                    2. Busca y aísla el script de Schema (JSON-LD).<br>
-                    3. La IA de <b>Gemini</b> valida el código en busca de errores y da recomendaciones.<br>
-                    4. Revisa la competencia con <b>Serper</b> para sugerir tipos de Schema que podrías añadir.
+                    1. Identifica a tus 3 principales competidores en Google para tu keyword (vía <b>Serper</b>).<br>
+                    2. Extrae el contenido relevante de sus páginas mejor posicionadas (vía <b>ScraperAPI</b>).<br>
+                    3. La IA de <b>Gemini</b> analiza toda la información para definir su pilar de contenido y, lo más importante, encontrar un ángulo o nicho de oportunidad que ellos no cubren.
                 </span>
             </div>
         </div>
         <p class="text-muted-foreground mt-2">
-            Los datos estructurados (Schema) son un código que ayuda a Google a entender de qué trata tu contenido a un nivel más profundo (ej. "esto es una receta", "esto es un producto"). Implementarlo correctamente puede hacer que tus páginas aparezcan con "fragmentos enriquecidos" (estrellas, precios, etc.) en los resultados de búsqueda, mejorando la visibilidad y el CTR.
+            En lugar de adivinar sobre qué escribir, esta herramienta analiza qué contenidos ya están funcionando y posicionando bien para tu keyword. Luego, usa la IA para realizar ingeniería inversa de su estrategia y encontrar "huecos" o ángulos únicos que puedes aprovechar para crear contenido superior y con mayores probabilidades de éxito.
         </p>
-        <div class="mt-6 space-y-4">
-            <div>
-                <label for="schema-path-input" class="block text-sm font-bold text-muted-foreground mb-2">URL de la Página a Analizar</label>
-                <div class="flex items-center">
-                    <span class="inline-flex items-center px-3 h-10 rounded-l-md border border-r-0 border-border bg-muted text-muted-foreground text-sm">
-                        ${domainPrefix}
-                    </span>
-                    <input id="schema-path-input" type="text"
-                           class="w-full h-10 bg-background border border-border rounded-r-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ring"
-                           placeholder="/ruta/de/tu/pagina"
-                           ${!currentProject ? 'disabled' : ''}>
-                </div>
+        <div class="mt-6">
+            <label for="content-strategy-keyword-input" class="block text-sm font-bold text-muted-foreground mb-2">Palabra Clave Principal del Nicho</label>
+            <div class="relative">
+                <ion-icon name="search-circle-outline" class="absolute left-3 top-1-2 -translate-y-1-2 text-muted-foreground"></ion-icon>
+                <input id="content-strategy-keyword-input" type="text"
+                       class="w-full bg-background border border-border rounded-md pl-10 pr-4 py-2 focus:outline-none focus:ring-2 focus:ring-ring"
+                       placeholder="ej: guitarra eléctrica para principiantes">
             </div>
         </div>
         <div class="text-right mt-6">
