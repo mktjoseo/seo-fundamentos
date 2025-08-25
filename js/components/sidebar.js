@@ -15,13 +15,13 @@ function renderUserProfile(containerElement, appState, userData) {
         <div class="relative"> ${userMenu}
             <button id="user-profile-btn" class="flex items-center space-x-3 w-full p-2 rounded-lg hover:bg-muted">
                 ${userData.avatar_url 
-                    ? `<img src="${userData.avatar_url}" alt="Avatar" class="w-10 h-10 rounded-full object-cover">` 
-                    : `<div class="w-10 h-10 rounded-full bg-muted flex items-center justify-center"><ion-icon name="person-outline" class="text-2xl text-muted-foreground"></ion-icon></div>`
+                    ? `<img src="${userData.avatar_url}" alt="Avatar" class="w-10 h-10 rounded-full object-cover flex-shrink-0">` 
+                    : `<div class="w-10 h-10 rounded-full bg-muted flex items-center justify-center flex-shrink-0"><ion-icon name="person-outline" class="text-2xl text-muted-foreground"></ion-icon></div>`
                 }
-                <div>
-                    <p class="font-semibold text-sm text-foreground">${userName}</p>
-                    <p class="text-xs text-muted-foreground">${userEmail}</p>
-                </div>
+                <div class="overflow-hidden">
+                    <p class="font-semibold text-sm text-foreground truncate">${userName}</p>
+                    <p class="text-xs text-muted-foreground truncate">${userEmail}</p>
+                    </div>
             </button>
         </div>
     `;
