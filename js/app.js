@@ -608,6 +608,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- 7. INICIALIZACIÓN ---
     async function initAppForUser() {
+        // --- LÓGICA SIMPLIFICADA ---
         const [projectsResponse, profileResponse] = await Promise.all([
             supabaseClient.from('projects').select('*').order('created_at', { ascending: true }),
             supabaseClient.from('profiles').select('*').single()
@@ -615,33 +616,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const { data: projectsFromDB, error: projectsError } = projectsResponse;
         if (projectsError) {
-            mainContent.innerHTML = `<div class="bg-destructive text-destructive-foreground p-4 rounded-md">Error al cargar proyectos.</div>`;
+            // Si falla, lo guardamos en el estado para que render() lo muestre
+            appState.error = "Error al cargar proyectos.";
             return; 
         }
 
         const { data: userProfile, error: profileError } = profileResponse;
         if (profileError) console.warn("No se pudo cargar el perfil del usuario:", profileError.message);
 
-        appState.projects = projectsFromDB;
+        // Actualizamos el estado de la aplicación con los datos cargados
+        appState.projects = projectsFromDB || [];
         appState.userProfile = userProfile;
         if (projectsFromDB.length > 0 && !appState.currentProjectId) {
             appState.currentProjectId = projectsFromDB[0].id;
         }
         
         buildSidebarNav(sidebarNav, views);
-        
-        // Al iniciar, cargamos los datos del dashboard para el primer proyecto
-        if (appState.currentProjectId) {
-            loadDashboardData();
-        } else {
-            render(); // Si no hay proyectos, solo renderizamos
-        }
     }
     
     function init() {
         const appLoader = document.getElementById('app-loader');
 
-        // --- LÓGICA DE INICIALIZACIÓN CORREGIDA ---
         supabaseClient.auth.onAuthStateChange(async (event, session) => {
             // Esta función se ejecuta al menos una vez al cargar la página.
             
@@ -672,6 +667,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Los listeners de la vista de autenticación se configuran una sola vez
         setupAuthEventListeners();
+        setupEventListeners();
         // --- FIN DE LA LÓGICA CORREGIDA ---
     }
     
