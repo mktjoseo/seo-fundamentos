@@ -144,7 +144,10 @@ textarea {
   padding: 10px;
   position: absolute;
   z-index: 10;
-  bottom: 150%;
+  /* --- LÍNEAS MODIFICADAS --- */
+  top: 100%;       /* Posiciona el tooltip debajo del icono */
+  margin-top: 8px; /* Añade un pequeño espacio */
+  /* --- FIN DE LA MODIFICACIÓN --- */
   left: 50%;
   margin-left: -140px; /* La mitad del width */
   opacity: 0;
