@@ -68,8 +68,15 @@ export default async function handler(request, response) {
         const scraperUrl = `http://api.scraperapi.com?api_key=${scraper_api_key}&url=${encodeURIComponent(url)}`;
         const scrapeResponse = await fetch(scraperUrl);
         if (scrapeResponse.ok) {
-          const html = await scrapeResponse.text();
-          const dom = new JSDOM(html, { resources: "usable" });
+          let html = await scrapeResponse.text();
+          
+          // --- LÓGICA AÑADIDA PARA LIMPIAR HTML ---
+          // Elimina etiquetas de estilo y script para evitar errores de parseo
+          html = html.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+                     .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '');
+          
+          const dom = new JSDOM(html); // Ya no necesitamos { resources: "usable" }
+
           const { document } = dom.window;
           const bodyText = document?.body?.innerText || '';
           combinedText += `Título: ${document?.querySelector('h1')?.textContent || ''}\nContenido: ${bodyText.slice(0, 1500)}\n\n`;

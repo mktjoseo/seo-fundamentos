@@ -21,13 +21,30 @@ function processLinkingResults(data) {
 
 // Calcula la salud y los problemas para el módulo 'zombie-urls'
 function processZombieResults(data) {
-    const issues = data.zombies || [];
-    const health = Math.max(0, 100 - (issues.length * 5)); // -5% por cada URL zombie
+    const results = data.results || [];
+    const criticalError = results.find(r => r.type === 'error');
+
+    // Si encontramos un error crítico (Sitemap no encontrado)
+    if (criticalError) {
+        return {
+            health: 10, // Penalización severa, la salud baja a 10%
+            issuesCount: 1,
+            issuesList: [{
+                text: `${criticalError.status}. ${criticalError.suggestion}`,
+                severity: 'high'
+            }]
+        };
+    }
+
+    // Si no hay errores críticos, buscamos los warnings (URLs no indexadas)
+    const issues = results.filter(r => r.type === 'warning');
+    const health = Math.max(0, 100 - (issues.length * 5)); // -5% por cada URL no indexada
+    
     return {
         health,
         issuesCount: issues.length,
         issuesList: issues.map(i => ({
-            text: `La URL ${i.url} no está indexada en Google.`,
+            text: `La URL ${i.url} podría no estar indexada. ${i.suggestion}`,
             severity: 'medium'
         }))
     };
