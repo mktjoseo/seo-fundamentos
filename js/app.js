@@ -285,9 +285,13 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (!keyword) return alert('Por favor, introduce una palabra clave.');
                         payload = { keyword, projectId: currentProject?.id };
                     } else if (moduleKey === 'structured-data') {
-                        const url = document.getElementById('schema-url-input')?.value;
-                        if (!url || !url.startsWith('http')) return alert('Por favor, introduce una URL válida.');
-                        payload = { url, projectId: currentProject?.id };
+                                                const path = document.getElementById('schema-path-input')?.value || '';
+                        if (!path.startsWith('/')) {
+                            return alert('La ruta debe comenzar con una barra inclinada "/". Por ejemplo: /mi-pagina');
+                        }
+                        const fullUrl = `https://${currentProject.url}${path}`;
+                        
+                        payload = { url: fullUrl, projectId: currentProject?.id };
                     }
                 } else {
                     if (!currentProject) return alert("Selecciona un proyecto para usar esta herramienta.");

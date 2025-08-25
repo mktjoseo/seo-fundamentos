@@ -76,49 +76,63 @@ export default async function handler(request, response) {
   }
 
   try {
-    // ---- LÓGICA DE AUTENTICACIÓN ----
+    // ---- LÓGICA DE AUTENTICACIÓN (sin cambios) ----
     const authHeader = request.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       throw new Error('Se requiere un token de autenticación válido.');
     }
     const token = authHeader.split(' ')[1];
-
     const supabase = createClient(
       process.env.SUPABASE_URL,
       process.env.SUPABASE_ANON_KEY,
       { global: { headers: { Authorization: `Bearer ${token}` } } }
     );
-
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     if (userError || !user) throw new Error('Autenticación fallida.');
-    // ---- FIN DE LA LÓGICA ----
-
+    
     const { projectId } = request.body;
     if (!projectId) {
       throw new Error('Se requiere un ID de proyecto.');
     }
 
-    // ---- OBTENER LOS ÚLTIMOS ANÁLISIS DE LA BASE DE DATOS ----
-    // Esta consulta SQL usa una ventana para obtener solo la fila más reciente para cada tipo de módulo.
-    const { data: latestAnalysis, error: dbError } = await supabase.rpc('get_latest_analysis_for_project', {
+    // --- LÓGICA DE OBTENCIÓN DE DATOS MODIFICADA ---
+    const getScoredAnalysis = supabase.rpc('get_latest_analysis_for_project', {
         p_project_id: projectId
     });
+
+    const getContentOpportunities = supabase
+        .from('analisis_resultados')
+        .select('id, created_at, results_data->keyword, results_data->competitors')
+        .eq('project_id', projectId)
+        .eq('module_type', 'content-strategy')
+        .order('created_at', { ascending: false })
+        .limit(3);
+
+    const [scoredResponse, opportunitiesResponse] = await Promise.all([
+        getScoredAnalysis,
+        getContentOpportunities
+    ]);
+
+    const { data: latestAnalysis, error: dbError } = scoredResponse;
+    const { data: opportunities, error: opportunitiesError } = opportunitiesResponse;
     
-    if (dbError) {
-      throw new Error(`Error en la base de datos: ${dbError.message}`);
+    if (dbError || opportunitiesError) {
+      throw new Error(`Error en la base de datos: ${dbError?.message || opportunitiesError?.message}`);
     }
+    // --- FIN DE LA LÓGICA MODIFICADA ---
 
     // ---- PROCESAR LOS DATOS Y CONSTRUIR EL RESUMEN ----
     const dashboardData = {
         healthScore: 100,
         issuesBySeverity: { high: 0, medium: 0, low: 0 },
+        // --- 'content-strategy' ELIMINADO DE ESTA LISTA ---
         modules: {
             'structure': { name: "Estructura y Relevancia", health: 100, status: "secondary", issuesCount: 0, issuesList: [] },
             'linking': { name: "Profundidad de Enlazado", health: 100, status: "secondary", issuesCount: 0, issuesList: [] },
             'zombie-urls': { name: "URLs Zombie", health: 100, status: "secondary", issuesCount: 0, issuesList: [] },
-            'structured-data': { name: "Datos Estructurados", health: 100, status: "secondary", issuesCount: 0, issuesList: [] },
-            'content-strategy': { name: "Estrategia de Contenido", health: 100, status: "secondary", issuesCount: 0, issuesList: [] }
-        }
+            'structured-data': { name: "Datos Estructurados", health: 100, status: "secondary", issuesCount: 0, issuesList: [] }
+        },
+        contentOpportunities: opportunities || [], // --- NUEVA PROPIEDAD AÑADIDA ---
     };
 
     const processingMap = {
@@ -136,17 +150,14 @@ export default async function handler(request, response) {
         if (processFunction) {
             const processedModule = processFunction(analysis.results_data);
             
-            // Actualizamos los datos del módulo
             dashboardData.modules[analysis.module_type].health = processedModule.health;
             dashboardData.modules[analysis.module_type].issuesCount = processedModule.issuesCount;
             dashboardData.modules[analysis.module_type].issuesList = processedModule.issuesList;
 
-            // Asignamos un color de estado basado en la salud
             if (processedModule.health < 70) dashboardData.modules[analysis.module_type].status = 'destructive';
             else if (processedModule.health < 90) dashboardData.modules[analysis.module_type].status = 'accent';
             else dashboardData.modules[analysis.module_type].status = 'secondary';
 
-            // Sumamos los problemas al contador general
             processedModule.issuesList.forEach(issue => {
                 if (dashboardData.issuesBySeverity[issue.severity] !== undefined) {
                     dashboardData.issuesBySeverity[issue.severity]++;

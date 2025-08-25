@@ -3,6 +3,30 @@
 function renderDashboard(appState, projectDetails) {
     if (!projectDetails) return `<div class="bg-card p-6 rounded-lg border border-border text-center text-muted-foreground">No hay datos de detalle para este proyecto.</div>`;
 
+    // --- LÓGICA PARA RENDERIZAR OPORTUNIDADES DE CONTENIDO AÑADIDA ---
+    let opportunitiesHTML = '';
+    if (projectDetails.contentOpportunities && projectDetails.contentOpportunities.length > 0) {
+        const opportunityCards = projectDetails.contentOpportunities.map(opp => {
+            const competitorsCount = opp.competitors?.length || 0;
+            return `
+            <div class="bg-card p-4 rounded-lg border border-border transition hover:border-primary">
+                <p class="font-semibold text-foreground">${opp.keyword || 'Keyword no encontrada'}</p>
+                <p class="text-sm text-muted-foreground">${competitorsCount} competidores analizados</p>
+            </div>
+            `;
+        }).join('');
+
+        opportunitiesHTML = `
+            <div class="mt-8">
+                <h3 class="text-xl font-bold mb-4 text-foreground">Últimas Oportunidades de Contenido</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    ${opportunityCards}
+                </div>
+            </div>
+        `;
+    }
+    // --- FIN DE LA LÓGICA AÑADIDA ---
+
     const modulesHTML = Object.entries(projectDetails.modules).map(([key, module]) => {
         const isOpen = appState.dashboardDetailsOpen[key];
         const severityColors = { high: 'bg-destructive', medium: 'bg-accent', low: 'bg-primary' };
@@ -41,8 +65,10 @@ function renderDashboard(appState, projectDetails) {
                     <canvas id="severity-chart"></canvas>
                 </div>
             </div>
-            <h3 class="text-xl font-bold mb-4 text-foreground">Desglose por Módulo</h3>
+            <h3 class="text-xl font-bold mb-4 text-foreground">Desglose por Módulo Técnico</h3>
             <div class="space-y-4">${modulesHTML}</div>
+            
+            ${opportunitiesHTML}
         </div>`;
 }
 

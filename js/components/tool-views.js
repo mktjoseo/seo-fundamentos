@@ -20,6 +20,18 @@ function renderProcessConsole(logMessages) {
 };
 
 function renderStructureView(appState) {
+    // --- LÓGICA DEL BOTÓN MODIFICADA ---
+    const buttonHTML = appState.isLoading
+        ? `<button disabled class="bg-primary/80 text-primary-foreground font-semibold px-8 py-3 rounded-md flex items-center gap-2 inline-flex cursor-not-allowed">
+            <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-primary-foreground"></div>
+            Analizando...
+           </button>`
+        : `<button data-module="structure" class="bg-primary hover:opacity-90 text-primary-foreground font-semibold px-8 py-3 rounded-md flex items-center gap-2 inline-flex">
+            <ion-icon name="analytics-outline"></ion-icon>
+            Analizar Contenido
+           </button>`;
+    // --- FIN DE LA LÓGICA MODIFICADA ---
+
     const inputHTML = `
         <h3 class="text-2xl font-bold text-foreground">Parámetros de Análisis</h3>
         <p class="text-muted-foreground mt-2">Introduce la palabra clave principal que quieres atacar y el texto completo de tu artículo.</p>
@@ -41,12 +53,10 @@ function renderStructureView(appState) {
             </div>
         </div>
         <div class="text-right mt-6">
-            <button data-module="structure" class="bg-primary hover:opacity-90 text-primary-foreground font-semibold px-8 py-3 rounded-md flex items-center gap-2 inline-flex">
-                <ion-icon name="analytics-outline"></ion-icon>
-                Analizar Contenido
-            </button>
+            ${buttonHTML}
         </div>
     `;
+
     const resultsRenderer = (results) => `
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div class="results-card text-center p-6">
@@ -80,17 +90,26 @@ function renderStructureView(appState) {
             </div>
         </div>
     `;
+
+    // --- LÓGICA DE RENDERIZADO DE RESULTADOS MODIFICADA ---
+    let resultsHTML = '';
+    if (appState.isLoading) {
+        // Durante la carga, muestra la consola de proceso si hay logs
+        const logs = appState.moduleResults['structure']?.activityLog || ['Iniciando análisis...'];
+        resultsHTML = renderProcessConsole(logs);
+    } else if (appState.moduleResults['structure']) {
+        // Cuando hay resultados, muéstralos
+        resultsHTML = resultsRenderer(appState.moduleResults['structure']);
+    } else {
+        // Estado inicial, antes de cualquier análisis
+        resultsHTML = `<div class="text-center py-12 bg-card rounded-lg border border-dashed border-border"><p class="text-muted-foreground">Los resultados de tu análisis aparecerán aquí.</p></div>`;
+    }
+    // --- FIN DE LA LÓGICA MODIFICADA ---
+
     return `
         <div class="max-w-4xl mx-auto space-y-8">
             <div class="bg-card p-6 rounded-lg border border-border">${inputHTML}</div>
-            <div id="results-container">
-                ${appState.isLoading
-                    ? `<div class="results-card flex items-center justify-center h-48"><div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div></div>`
-                    : appState.moduleResults['structure']
-                        ? resultsRenderer(appState.moduleResults['structure'])
-                        : `<div class="text-center py-12"><p class="text-muted-foreground">Los resultados de tu análisis aparecerán aquí.</p></div>`
-                }
-            </div>
+            <div id="results-container">${resultsHTML}</div>
         </div>
     `;
 }
@@ -98,6 +117,15 @@ function renderStructureView(appState) {
 function renderLinkingView(appState) {
     const currentProject = appState.projects.find(p => p.id === appState.currentProjectId);
     const startUrl = currentProject ? (currentProject.url.startsWith('http') ? currentProject.url : `https://${currentProject.url}`) : '';
+
+    // --- LÓGICA DEL BOTÓN AÑADIDA ---
+    const buttonHTML = appState.isLoading
+        ? `<button disabled class="bg-primary/80 text-primary-foreground font-semibold px-6 py-2.5 rounded-md flex items-center gap-2 inline-flex cursor-not-allowed">
+            <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-primary-foreground"></div>
+            Calculando...
+           </button>`
+        : `<button data-module="linking" class="bg-primary hover:opacity-90 text-primary-foreground font-semibold px-6 py-2.5 rounded-md">Calcular Profundidad</button>`;
+    // --- FIN DE LA LÓGICA AÑADIDA ---
 
     const inputHTML = `
         <h3 class="text-2xl font-bold text-foreground">Análisis de Profundidad de Enlazado</h3>
@@ -113,7 +141,7 @@ function renderLinkingView(appState) {
             </div>
         </div>
         <div class="text-right mt-6">
-            <button data-module="linking" class="bg-primary hover:opacity-90 text-primary-foreground font-semibold px-6 py-2.5 rounded-md">Calcular Profundidad</button>
+            ${buttonHTML}
         </div>`;
 
     const resultsRenderer = (data) => {
@@ -164,13 +192,21 @@ function renderLinkingView(appState) {
         `;
     };
 
+    // --- LÓGICA DE RENDERIZADO DE RESULTADOS MODIFICADA ---
     const data = appState.moduleResults['linking'];
     let resultsHTML = '';
     if (appState.isLoading) {
-        resultsHTML = `<div class="results-card text-center py-12"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div><p class="mt-4 text-muted-foreground">Rastreando el sitio... Esto puede tardar un momento.</p></div>`;
+        // Durante la carga, muestra la consola de proceso
+        const logs = data?.activityLog || ['Iniciando rastreo del sitio... Esto puede tardar unos minutos.'];
+        resultsHTML = renderProcessConsole(logs);
     } else if (data) {
+        // Cuando hay resultados, muéstralos
         resultsHTML = resultsRenderer(data);
+    } else {
+        // Estado inicial, antes de cualquier análisis
+        resultsHTML = `<div class="text-center py-12 bg-card rounded-lg border border-dashed border-border"><p class="text-muted-foreground">Los resultados de tu análisis aparecerán aquí.</p></div>`;
     }
+    // --- FIN DE LA LÓGICA MODIFICADA ---
 
     return `
         <div class="max-w-4xl mx-auto space-y-8">
@@ -186,6 +222,15 @@ function renderZombiesView(appState) {
         return `<div class="text-center py-12 bg-card rounded-lg border border-dashed border-border"><ion-icon name="briefcase-outline" class="text-5xl text-muted-foreground"></ion-icon><h3 class="text-xl font-bold mt-4">No hay un proyecto seleccionado</h3><p class="text-muted-foreground mt-2">Por favor, crea o selecciona un proyecto para poder analizar sus URLs.</p><button data-view="projects" class="mt-6 bg-primary hover:opacity-90 text-primary-foreground font-semibold px-6 py-2.5 rounded-md">Ir a Proyectos</button></div>`;
     }
 
+    // --- LÓGICA DEL BOTÓN AÑADIDA ---
+    const buttonHTML = appState.isLoading
+        ? `<button disabled class="bg-primary/80 text-primary-foreground font-semibold px-6 py-2.5 rounded-md flex items-center gap-2 inline-flex cursor-not-allowed">
+            <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-primary-foreground"></div>
+            Buscando...
+           </button>`
+        : `<button data-module="zombie-urls" class="bg-primary hover:opacity-90 text-primary-foreground font-semibold px-6 py-2.5 rounded-md">Buscar URLs Zombie</button>`;
+    // --- FIN DE LA LÓGICA AÑADIDA ---
+
     const inputHTML = `
         <h3 class="text-2xl font-bold text-foreground">Análisis de URLs Zombie</h3>
         <p class="text-muted-foreground mt-2">Encuentra páginas con problemas de indexación o de bajo valor.</p>
@@ -196,7 +241,7 @@ function renderZombiesView(appState) {
             </div>
         </div>
         <div class="text-right mt-6">
-            <button data-module="zombie-urls" class="bg-primary hover:opacity-90 text-primary-foreground font-semibold px-6 py-2.5 rounded-md">Buscar URLs Zombie</button>
+            ${buttonHTML}
         </div>`;
     
     const resultsRenderer = (data) => {
@@ -220,47 +265,66 @@ function renderZombiesView(appState) {
         return `<div class="bg-card p-6 rounded-lg border border-border space-y-6"><div><h4 class="text-lg font-semibold">Diagnóstico de Indexación</h4><p class="text-sm text-muted-foreground mt-1">Se encontraron <span class="font-bold text-destructive">${warnings.length} URLs</span> con posibles problemas y <span class="font-bold text-secondary">${infos.length} archivos</span> correctamente no indexados.</p></div>${warnings.length > 0 ? `<div class="bg-muted p-4 rounded-lg"><h5 class="font-semibold text-foreground mb-2 text-destructive flex items-center gap-2"><ion-icon name="warning-outline"></ion-icon>Posibles Problemas a Revisar</h5><div class="space-y-3 mt-3">${warnings.map(renderRow).join('')}</div></div>` : ''}${infos.length > 0 ? `<div class="bg-muted p-4 rounded-lg"><h5 class="font-semibold text-foreground mb-2 text-secondary flex items-center gap-2"><ion-icon name="checkmark-done-outline"></ion-icon>Archivos de Sistema (Correcto)</h5><div class="space-y-3 mt-3">${infos.map(renderRow).join('')}</div></div>` : ''}</div>`;
     }
 
+    // --- LÓGICA DE RENDERIZADO DE RESULTADOS MODIFICADA ---
     const data = appState.moduleResults['zombie-urls'];
-    let consoleHTML = '';
-    let resultsHTML = '';
+    let resultsContainerHTML = '';
     
     if (appState.isLoading) {
-        consoleHTML = renderProcessConsole(['Iniciando análisis...']);
+        const logs = data?.activityLog || ['Iniciando análisis...'];
+        resultsContainerHTML = renderProcessConsole(logs);
     } else if (data) {
-        consoleHTML = renderProcessConsole(data.activityLog);
-        resultsHTML = resultsRenderer(data);
+        const consoleHTML = renderProcessConsole(data.activityLog);
+        const resultsHTML = resultsRenderer(data);
+        resultsContainerHTML = `${consoleHTML}<div class="mt-8">${resultsHTML}</div>`;
+    } else {
+        resultsContainerHTML = `<div class="text-center py-12 bg-card rounded-lg border border-dashed border-border"><p class="text-muted-foreground">Los resultados de tu análisis aparecerán aquí.</p></div>`;
     }
+    // --- FIN DE LA LÓGICA MODIFICADA ---
 
     return `
         <div class="max-w-4xl mx-auto space-y-8">
             <div class="bg-card p-6 rounded-lg border border-border">${inputHTML}</div>
             <div id="results-container">
-                ${consoleHTML}
-                <div class="mt-8">${resultsHTML}</div>
+                ${resultsContainerHTML}
             </div>
         </div>
     `;
 }
 
 function renderSchemaView(appState) {
-    const inputHTML = `
+    
+    const currentProject = appState.projects.find(p => p.id === appState.currentProjectId);
+    const domainPrefix = currentProject ? `https://${currentProject.url}` : 'https://selecciona-un-proyecto';
+    
+    const buttonHTML = appState.isLoading
+        ? `<button disabled class="bg-primary/80 text-primary-foreground font-semibold px-6 py-2.5 rounded-md flex items-center gap-2 inline-flex cursor-not-allowed">
+            <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-primary-foreground"></div>
+            Auditando...
+           </button>`
+        : `<button data-module="structured-data" class="bg-primary hover:opacity-90 text-primary-foreground font-semibold px-6 py-2.5 rounded-md">Auditar Schema</button>`;
+
+        const inputHTML = `
         <h3 class="text-2xl font-bold text-foreground">Auditor de Datos Estructurados (Schema)</h3>
         <p class="text-muted-foreground mt-2">
-            Esta herramienta inteligente valida el código Schema (JSON-LD) de una URL.
+            Esta herramienta inteligente valida el código Schema (JSON-LD) de una URL de tu proyecto.
         </p>
         <div class="mt-6 space-y-4">
             <div>
                 <label for="schema-url-input" class="block text-sm font-bold text-muted-foreground mb-2">URL de la Página a Analizar</label>
-                <div class="relative">
-                    <ion-icon name="link-outline" class="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"></ion-icon>
-                    <input id="schema-url-input" type="text"
-                           class="w-full bg-background border border-border rounded-md pl-10 pr-4 py-2 focus:outline-none focus:ring-2 focus:ring-ring"
-                           placeholder="https://ejemplo.com/pagina-con-schema">
+                
+                <div class="flex items-center">
+                    <span class="inline-flex items-center px-3 h-10 rounded-l-md border border-r-0 border-border bg-muted text-muted-foreground text-sm">
+                        ${domainPrefix}
+                    </span>
+                    <input id="schema-path-input" type="text"
+                           class="w-full h-10 bg-background border border-border rounded-r-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ring"
+                           placeholder="/ruta/de/tu/pagina"
+                           ${!currentProject ? 'disabled' : ''}>
                 </div>
             </div>
         </div>
         <div class="text-right mt-6">
-            <button data-module="structured-data" class="bg-primary hover:opacity-90 text-primary-foreground font-semibold px-6 py-2.5 rounded-md">Auditar Schema</button>
+            ${buttonHTML}
         </div>`;
 
     const resultsRenderer = (results) => `
@@ -289,22 +353,36 @@ function renderSchemaView(appState) {
             </div>
         </div>`;
 
+    // --- LÓGICA DE RENDERIZADO DE RESULTADOS MODIFICADA ---
+    let resultsHTML = '';
+    if (appState.isLoading) {
+        const logs = appState.moduleResults['structured-data']?.activityLog || ['Iniciando auditoría...'];
+        resultsHTML = renderProcessConsole(logs);
+    } else if (appState.moduleResults['structured-data']) {
+        resultsHTML = resultsRenderer(appState.moduleResults['structured-data']);
+    } else {
+        resultsHTML = `<div class="text-center py-12 bg-card rounded-lg border border-dashed border-border"><p class="text-muted-foreground">Los resultados de tu análisis aparecerán aquí.</p></div>`;
+    }
+    // --- FIN DE LA LÓGICA MODIFICADA ---
+
     return `
         <div class="max-w-4xl mx-auto space-y-8">
             <div class="bg-card p-6 rounded-lg border border-border">${inputHTML}</div>
-            <div id="results-container">
-                ${appState.isLoading
-                    ? `<div class="results-card flex items-center justify-center h-48"><div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div></div>`
-                    : appState.moduleResults['structured-data']
-                        ? resultsRenderer(appState.moduleResults['structured-data'])
-                        : `<div class="text-center py-12"><p class="text-muted-foreground">Los resultados de tu análisis aparecerán aquí.</p></div>`
-                }
-            </div>
+            <div id="results-container">${resultsHTML}</div>
         </div>
     `;
 }
 
 function renderContentStrategyView(appState) {
+    // --- LÓGICA DEL BOTÓN AÑADIDA ---
+    const buttonHTML = appState.isLoading
+        ? `<button disabled class="bg-primary/80 text-primary-foreground font-semibold px-6 py-2.5 rounded-md flex items-center gap-2 inline-flex cursor-not-allowed">
+            <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-primary-foreground"></div>
+            Analizando...
+           </button>`
+        : `<button data-module="content-strategy" class="bg-primary hover:opacity-90 text-primary-foreground font-semibold px-6 py-2.5 rounded-md">Analizar Estrategia</button>`;
+    // --- FIN DE LA LÓGICA AÑADIDA ---
+
     const inputHTML = `
         <h3 class="text-2xl font-bold text-foreground">Generador de Estrategia de Contenido</h3>
         <div class="text-muted-foreground mt-2 space-y-2 text-sm">
@@ -320,7 +398,7 @@ function renderContentStrategyView(appState) {
             </div>
         </div>
         <div class="text-right mt-6">
-            <button data-module="content-strategy" class="bg-primary hover:opacity-90 text-primary-foreground font-semibold px-6 py-2.5 rounded-md">Analizar Estrategia</button>
+            ${buttonHTML}
         </div>`;
 
     const resultsRenderer = (data) => {
@@ -373,23 +451,27 @@ function renderContentStrategyView(appState) {
         </div>`;
     }
 
+    // --- LÓGICA DE RENDERIZADO DE RESULTADOS MODIFICADA ---
     const data = appState.moduleResults['content-strategy'];
-    let consoleHTML = '';
-    let resultsHTML = '';
+    let resultsContainerHTML = '';
     
     if (appState.isLoading) {
-        consoleHTML = renderProcessConsole(['Iniciando análisis...']);
+        const logs = data?.activityLog || ['Iniciando análisis estratégico...'];
+        resultsContainerHTML = renderProcessConsole(logs);
     } else if (data) {
-        consoleHTML = renderProcessConsole(data.activityLog);
-        resultsHTML = resultsRenderer(data);
+        const consoleHTML = renderProcessConsole(data.activityLog);
+        const resultsHTML = resultsRenderer(data);
+        resultsContainerHTML = `${consoleHTML}<div class="mt-8">${resultsHTML}</div>`;
+    } else {
+        resultsContainerHTML = `<div class="text-center py-12 bg-card rounded-lg border border-dashed border-border"><p class="text-muted-foreground">Los resultados de tu análisis aparecerán aquí.</p></div>`;
     }
+    // --- FIN DE LA LÓGICA MODIFICADA ---
 
     return `
         <div class="max-w-4xl mx-auto space-y-8">
             <div class="bg-card p-6 rounded-lg border border-border">${inputHTML}</div>
             <div id="results-container">
-                ${consoleHTML}
-                <div class="mt-8">${resultsHTML}</div>
+                ${resultsContainerHTML}
             </div>
         </div>`;
 }
