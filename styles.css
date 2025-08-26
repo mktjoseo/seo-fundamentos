@@ -137,17 +137,17 @@ textarea {
 .tooltip .tooltip-text {
   visibility: hidden;
   width: 280px;
-  background-color: var(--card);
-  color: var(--card-foreground);
+  background-color: var(--popover);
+  color: var(--popover-foreground);
   text-align: left;
   border-radius: 6px;
   padding: 10px;
   position: absolute;
   z-index: 10;
-  /* --- LÍNEAS MODIFICADAS --- */
+  
   top: 100%;       /* Posiciona el tooltip debajo del icono */
   margin-top: 8px; /* Añade un pequeño espacio */
-  /* --- FIN DE LA MODIFICACIÓN --- */
+  
   left: 50%;
   margin-left: -140px; /* La mitad del width */
   opacity: 0;
