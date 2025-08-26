@@ -518,6 +518,17 @@ document.addEventListener('DOMContentLoaded', () => {
                         const severityImg = window.severityChartInstance.toBase64Image();
                         pdf.addImage(healthImg, 'PNG', 40, yPos, 150, 150);
                         pdf.addImage(severityImg, 'PNG', 220, yPos, 335, 150);
+                        
+                        // --- LÓGICA AÑADIDA PARA DIBUJAR EL TEXTO DEL GRÁFICO ---
+                        const chartCenterX = 40 + (150 / 2); // Coordenada X del centro del gráfico
+                        const chartCenterY = yPos + (150 / 2); // Coordenada Y del centro del gráfico
+
+                        pdf.setFontSize(30).setFont(undefined, 'bold');
+                        pdf.text(`${healthScore}%`, chartCenterX, chartCenterY, { align: 'center' });
+                        pdf.setFontSize(10).setFont(undefined, 'normal');
+                        pdf.text('Salud', chartCenterX, chartCenterY + 15, { align: 'center' });
+                        // --- FIN DE LA LÓGICA AÑADIDA ---
+
                         yPos += 180;
                     }
 
@@ -530,22 +541,21 @@ document.addEventListener('DOMContentLoaded', () => {
                         pdf.setFontSize(12).setFont(undefined, 'bold');
                         pdf.text(`${module.name}:`, 40, yPos);
                         pdf.setFont(undefined, 'normal');
-                        pdf.text(`${module.health}% Salud`, 450, yPos, { align: 'right' });
+                        pdf.text(`${module.health}% Salud`, 555, yPos, { align: 'right' }); // Ajustado a 555 para alinear a la derecha
                         yPos += 20;
 
                         if (module.issuesList.length > 0) {
                             module.issuesList.forEach(issue => {
                                 pdf.setFontSize(10);
                                 const issueText = `- ${issue.text}`;
-                                // Manejo de texto largo con auto-wrap
                                 const splitText = pdf.splitTextToSize(issueText, 515); 
                                 pdf.text(splitText, 50, yPos);
                                 yPos += (splitText.length * 12);
                             });
                         } else {
-                            pdf.setFontSize(10).setTextColor(150);
+                            pdf.setFontSize(10).setTextColor(150); // Color gris para texto normal
                             pdf.text('- ¡Todo en orden!', 50, yPos);
-                            pdf.setTextColor(0);
+                            pdf.setTextColor(0); // Restaurar a color negro
                             yPos += 15;
                         }
                         yPos += 10;
@@ -553,8 +563,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     
                     // --- Oportunidades de Contenido ---
                     if(contentOpportunities && contentOpportunities.length > 0) {
-                        pdf.addPage();
-                        yPos = 60;
+                        // Comprobamos si el contenido cabe en la página actual
+                        if (yPos > 700) { // Si estamos muy abajo, creamos nueva página
+                           pdf.addPage();
+                           yPos = 60;
+                        }
                         pdf.setFontSize(16).setFont(undefined, 'bold');
                         pdf.text('Oportunidades de Contenido', 40, yPos);
                         yPos += 25;

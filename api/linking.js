@@ -7,7 +7,7 @@ const { JSDOM } = require('jsdom');
 const FILE_EXTENSION_REGEX = /\.(pdf|jpg|jpeg|png|gif|svg|zip|rar|exe|mp3|mp4|avi)$/i;
 
 export default async function handler(request, response) {
-  // Manejo de CORS
+  // Manejo de CORS (sin cambios)
   response.setHeader('Access-Control-Allow-Origin', '*');
   response.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   response.setHeader('Access-control-allow-headers', 'authorization, content-type');
@@ -23,7 +23,7 @@ export default async function handler(request, response) {
       throw new Error('Faltan datos requeridos (startUrl, keyUrls, o projectId).');
     }
 
-    // --- Autenticación ---
+    // --- Autenticación (sin cambios) ---
     const authHeader = request.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) throw new Error('Se requiere un token de autenticación válido.');
     const token = authHeader.split(' ')[1];
@@ -54,10 +54,24 @@ export default async function handler(request, response) {
         return urlObj.href.endsWith('/') ? urlObj.href.slice(0, -1) : urlObj.href;
     }));
 
-    activityLog.push(`Buscando ${normalizedKeyUrls.size} URLs clave.`);
+    activityLog.push(`Buscando ${normalizedKeyUrls.size} URLs clave (profundidad máxima: 2 clics).`);
 
+    // --- BUCLE WHILE MODIFICADO ---
     while (queue.length > 0 && pagesCrawled < CRAWL_LIMIT) {
       const { url, depth } = queue.shift();
+
+      // Si la profundidad actual ya es 2, procesamos la página pero no añadimos más enlaces a la cola.
+      if (depth >= 2 && !normalizedKeyUrls.has(url.endsWith('/') ? url.slice(0,-1) : url)) {
+        const normalizedUrlForCheck = url.endsWith('/') ? url.slice(0, -1) : url;
+        if (normalizedKeyUrls.has(normalizedUrlForCheck)) {
+          results.set(normalizedUrlForCheck, depth);
+          activityLog.push(`¡URL clave encontrada! "${url}" a ${depth} clics.`);
+          normalizedKeyUrls.delete(normalizedUrlForCheck);
+        }
+        continue; // No rastrear más allá de profundidad 2
+      }
+      // --- FIN DE LA MODIFICACIÓN ---
+
       pagesCrawled++;
       
       let normalizedUrlForCheck = url.endsWith('/') ? url.slice(0, -1) : url;
@@ -117,22 +131,23 @@ export default async function handler(request, response) {
         activityLog.push(`Límite de rastreo (${CRAWL_LIMIT} páginas) alcanzado.`);
     }
 
+    // --- LÓGICA DE RESULTADOS MODIFICADA ---
     const finalResults = keyUrls.map(originalUrl => {
         let urlObj = new URL(originalUrl, startUrl);
         urlObj.hash = '';
         urlObj.search = '';
-        let normalizedUrl = urlObj.href;
-        if (normalizedUrl.endsWith('/')) {
-            normalizedUrl = normalizedUrl.slice(0, -1);
-        }
+        let normalizedUrl = urlObj.href.endsWith('/') ? urlObj.href.slice(0, -1) : urlObj.href;
       
-      const depth = results.has(normalizedUrl) ? results.get(normalizedUrl) : 'No encontrado';
+      const depth = results.get(normalizedUrl);
+      const notFoundMessage = "No encontrada a 2 clics de profundidad. Si es importante, acércala a la home.";
+
       return {
         url: originalUrl,
-        depth: depth,
-        isProblematic: typeof depth === 'number' && depth > 3
+        depth: typeof depth === 'number' ? depth : notFoundMessage,
+        isProblematic: typeof depth !== 'number' || depth > 2
       };
     });
+    // --- FIN DE LA MODIFICACIÓN ---
     
     const dataToReturn = {
         results: finalResults,
@@ -149,6 +164,6 @@ export default async function handler(request, response) {
     response.status(200).json(dataToReturn);
 
   } catch (err) {
-    response.status(401).json({ error: err.message, activityLog });
+    response.status(500).json({ error: err.message, activityLog });
   }
 }
