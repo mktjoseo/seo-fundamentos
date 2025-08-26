@@ -297,13 +297,15 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (!keyword) return alert('Por favor, introduce una palabra clave.');
                         payload = { keyword, projectId: currentProject?.id };
                     } else if (moduleKey === 'structured-data') {
-                                                const path = document.getElementById('schema-path-input')?.value || '';
-                        if (!path.startsWith('/')) {
+                        // --- LÓGICA DE VALIDACIÓN MEJORADA ---
+                        let path = document.getElementById('schema-path-input')?.value.trim() || '/';
+
+                        if (path !== '/' && !path.startsWith('/')) {
                             return alert('La ruta debe comenzar con una barra inclinada "/". Por ejemplo: /mi-pagina');
                         }
-                        const fullUrl = `https://${currentProject.url}${path}`;
                         
-                        payload = { url: fullUrl, projectId: currentProject?.id };
+                        const fullUrl = `https://${currentProject.url}${path}`;
+                        payload = { url: fullUrl, projectId: currentProject.id };
                     }
                 } else {
                     if (!currentProject) return alert("Selecciona un proyecto para usar esta herramienta.");

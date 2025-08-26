@@ -158,14 +158,6 @@ textarea {
   line-height: 1.4;
 }
 
-.btn {
-    @apply font-semibold px-6 py-2.5 rounded-md transition-opacity flex items-center justify-center gap-2 inline-flex;
-}
-
-.btn-primary {
-    @apply btn bg-primary text-primary-foreground hover:opacity-90;
-}
-
 .tooltip:hover .tooltip-text {
   visibility: visible;
   opacity: 1;
@@ -173,4 +165,26 @@ textarea {
 
 .result-row {
     @apply bg-background px-4 py-3 rounded-md text-sm grid grid-cols-3 items-center gap-4;
+}
+
+.btn {
+    font-weight: 600;
+    padding: 0.625rem 1.5rem; /* Equivalente a px-6 py-2.5 */
+    border-radius: 0.375rem; /* Equivalente a rounded-md */
+    transition-property: opacity;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 150ms;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem; /* Equivalente a gap-2 */
+}
+
+.btn-primary {
+    background-color: var(--primary);
+    color: var(--primary-foreground);
+}
+
+.btn-primary:hover {
+    opacity: 0.9;
 }

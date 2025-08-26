@@ -388,20 +388,22 @@ function renderSchemaView(appState) {
         </div>`;
 
     const resultsRenderer = (results) => `
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div class="results-card">
+         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="results-card p-6">
                 <h4 class="text-lg font-semibold text-foreground mb-4">Informe de Validación</h4>
                 <div class="${results.validation.status.includes('Error') ? 'bg-destructive/10 text-destructive border-destructive/30' : results.validation.status.includes('advertencias') ? 'bg-accent/10 text-accent border-accent/30' : 'bg-secondary/10 text-secondary border-secondary/30'} p-4 rounded-md border">
                     <p class="font-bold flex items-center gap-2">
                         <ion-icon name="${results.validation.status.includes('Error') ? 'close-circle-outline' : 'checkmark-circle-outline'}"></ion-icon>
                         ${results.validation.status}
                     </p>
-                    <ul class="list-disc list-inside mt-2 text-sm space-y-1">
+                    
+                    {/* --- Lista con clases corregidas --- */}
+                    <ul class="list-disc list-outside ml-4 mt-2 text-sm space-y-1">
                         ${results.validation.issues.map(i => `<li><strong>${i.type}:</strong> ${i.message}</li>`).join('')}
                     </ul>
                 </div>
             </div>
-            <div class="results-card">
+            <div class="results-card p-6">
                 <h4 class="text-lg font-semibold text-foreground mb-4">Oportunidades vs. Competencia</h4>
                  <p class="text-sm text-muted-foreground mb-3">Tus competidores en la SERP están usando estos tipos de Schema:</p>
                     <div class="flex flex-wrap gap-2">
@@ -462,7 +464,7 @@ function renderContentStrategyView(appState) {
         <div class="mt-6">
             <label for="content-strategy-keyword-input" class="block text-sm font-bold text-muted-foreground mb-2">Palabra Clave Principal del Nicho</label>
             <div class="relative">
-                <ion-icon name="search-circle-outline" class="absolute left-3 top-1-2 -translate-y-1-2 text-muted-foreground"></ion-icon>
+                <ion-icon name="search-outline" class="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"></ion-icon>
                 <input id="content-strategy-keyword-input" type="text"
                        class="w-full bg-background border border-border rounded-md pl-10 pr-4 py-2 focus:outline-none focus:ring-2 focus:ring-ring"
                        placeholder="ej: guitarra eléctrica para principiantes">
