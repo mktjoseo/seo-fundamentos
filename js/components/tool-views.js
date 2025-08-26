@@ -195,7 +195,7 @@ function renderLinkingView(appState) {
                 <p class="text-sm text-muted-foreground mt-1">${crawlLog.length} URLs encontradas. Este es el camino que siguió el crawler.</p>
                 <div class="mt-4 space-y-2 max-h-60 overflow-y-auto pr-2">
                     ${crawlLog.map(log => `
-                        <div class="result-row">
+                        <div class="grid grid-cols-3 items-center gap-4 bg-background px-4 py-2 rounded-md text-sm">
                             <span class="font-mono text-foreground col-span-2 truncate" ... >${log.url}</span>
                             <span class="font-semibold text-right text-muted-foreground">${log.depth} clics</span>
                         </div>
@@ -212,7 +212,7 @@ function renderLinkingView(appState) {
             </div>
             <div class="space-y-2 mt-4">
                 ${results.map(r => `
-                    <div class="result-row">
+                    <div class="grid grid-cols-3 items-center gap-4 bg-background px-4 py-3 rounded-md text-sm">
                         <span class="font-mono text-foreground col-span-2 truncate" ... >${r.url}</span>
                         <span class="font-semibold text-right ${r.isProblematic ? 'text-destructive' : 'text-foreground'}">
                             ${typeof r.depth === 'number' ? `${r.depth} clics` : r.depth}
@@ -305,10 +305,13 @@ function renderZombiesView(appState) {
             const isWarning = r.type === 'warning';
             const icon = isWarning ? 'warning-outline' : 'checkmark-circle-outline';
             const textColor = isWarning ? 'text-destructive' : 'text-secondary';
-            return `
-            <div class="result-row">
-            <span class="font-mono text-sm text-foreground col-span-1">${r.url}
-            </span><div class="${textColor} font-semibold text-sm flex items-center gap-2"><ion-icon name="${icon}"></ion-icon>${r.status}</div><div class="text-muted-foreground text-sm">${r.suggestion}</div></div>`;
+            return `<div class="grid grid-cols-1 md:grid-cols-3 items-center gap-4 bg-background p-3 rounded-md">
+                        <span class="font-mono text-sm text-foreground col-span-1">${r.url}</span>
+                        <div class="${textColor} font-semibold text-sm flex items-center gap-2">
+                            <ion-icon name="${icon}"></ion-icon>${r.status}
+                        </div>
+                        <div class="text-muted-foreground text-sm">${r.suggestion}</div>
+                    </div>`;
         };
         
         return `<div class="bg-card p-6 rounded-lg border border-border space-y-6"><div><h4 class="text-lg font-semibold">Diagnóstico de Indexación</h4><p class="text-sm text-muted-foreground mt-1">Se encontraron <span class="font-bold text-destructive">${warnings.length} URLs</span> con posibles problemas y <span class="font-bold text-secondary">${infos.length} archivos</span> correctamente no indexados.</p></div>${warnings.length > 0 ? `<div class="bg-muted p-4 rounded-lg"><h5 class="font-semibold text-foreground mb-2 text-destructive flex items-center gap-2"><ion-icon name="warning-outline"></ion-icon>Posibles Problemas a Revisar</h5><div class="space-y-3 mt-3">${warnings.map(renderRow).join('')}</div></div>` : ''}${infos.length > 0 ? `<div class="bg-muted p-4 rounded-lg"><h5 class="font-semibold text-foreground mb-2 text-secondary flex items-center gap-2"><ion-icon name="checkmark-done-outline"></ion-icon>Archivos de Sistema (Correcto)</h5><div class="space-y-3 mt-3">${infos.map(renderRow).join('')}</div></div>` : ''}</div>`;
@@ -397,7 +400,6 @@ function renderSchemaView(appState) {
                         ${results.validation.status}
                     </p>
                     
-                    {/* --- Lista con clases corregidas --- */}
                     <ul class="list-disc list-outside ml-4 mt-2 text-sm space-y-1">
                         ${results.validation.issues.map(i => `<li><strong>${i.type}:</strong> ${i.message}</li>`).join('')}
                     </ul>

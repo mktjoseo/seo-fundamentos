@@ -163,28 +163,36 @@ textarea {
   opacity: 1;
 }
 
-.result-row {
-    @apply bg-background px-4 py-3 rounded-md text-sm grid grid-cols-3 items-center gap-4;
-}
-
 .btn {
     font-weight: 600;
     padding: 0.625rem 1.5rem; /* Equivalente a px-6 py-2.5 */
-    border-radius: 0.375rem; /* Equivalente a rounded-md */
-    transition-property: opacity;
-    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-    transition-duration: 150ms;
+    border-radius: 0.5rem; /* Un poco más redondeado (equivale a rounded-lg) */
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 0.5rem; /* Equivalente a gap-2 */
+    cursor: pointer;
+    border: 1px solid transparent; /* Borde base transparente */
+    /* Transición suave para todos los cambios */
+    transition: all 0.2s ease-in-out;
 }
 
 .btn-primary {
     background-color: var(--primary);
     color: var(--primary-foreground);
+    border-color: rgba(0, 0, 0, 0.2); /* Borde sutil */
+    /* Sombra para darle profundidad */
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
 }
 
 .btn-primary:hover {
-    opacity: 0.9;
+    /* Al pasar el cursor, el botón se "eleva" y la sombra se hace más grande */
+    transform: translateY(-2px);
+    box-shadow: 0 7px 14px rgba(0,0,0,0.1), 0 3px 6px rgba(0,0,0,0.08);
+}
+
+.btn-primary:active {
+    /* Al hacer clic, el botón se "presiona" */
+    transform: translateY(0);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1); /* Vuelve a la sombra original */
 }
