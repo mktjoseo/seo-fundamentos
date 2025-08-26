@@ -243,30 +243,117 @@ document.addEventListener('DOMContentLoaded', () => {
             if (settingsButton) setState({ currentView: 'settings', isUserMenuOpen: false });
         });      
 
+        // --- LISTENER DE CLICS EN mainContent (VERSIÓN ACTUALIZADA 26.08) ---
         mainContent.addEventListener('click', async (e) => {
-            const resetButton = e.target.closest('#reset-password-btn');
-            const deleteAccountBtn = e.target.closest('#delete-account-btn');
+            const currentProject = appState.projects.find(p => p.id === appState.currentProjectId);
+            const token = appState.session.access_token;
+
+            // Función interna reutilizable para llamar a la API de "URLs Zombie"
+            async function runZombieAnalysis(payload) {
+                setState({ isLoading: true });
+                try {
+                    const response = await fetch('/api/zombie-urls', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(payload) });
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.error || 'Hubo un error en el servidor.');
+                    }
+                    const data = await response.json();
+                    setState({ isLoading: false, moduleResults: { ...appState.moduleResults, 'zombie-urls': data } });
+                } catch (error) {
+                    alert(`Error: ${error.message}`);
+                    setState({ isLoading: false });
+                }
+            }
+            
+            // --- Detectamos todos los posibles botones ---
+            const moduleButton = e.target.closest('button[data-module]');
+            const sitemapUrlButton = e.target.closest('button[data-sitemap-url]');
+            const sitemapSampleButton = e.target.closest('button[data-sitemap-sample]');
+            const sitemapCancelButton = e.target.closest('button[data-sitemap-cancel]');
+            
             const actionButton = e.target.closest('button[data-project-action-id]');
             const editButton = e.target.closest('button[data-edit-project-id]');
             const cancelButton = e.target.closest('button[data-cancel-edit-id]');
             const deleteButton = e.target.closest('button[data-delete-project-id]');
             const dashboardButton = e.target.closest('button[data-module-key]');
-            const moduleButton = e.target.closest('button[data-module]');
+            const resetButton = e.target.closest('#reset-password-btn');
+            const deleteAccountBtn = e.target.closest('#delete-account-btn');
             const exportLinkingBtn = e.target.closest('#export-linking-csv');
             const copyQuestionsBtn = e.target.closest('#copy-questions-btn');
             const exportStrategyBtn = e.target.closest('#export-strategy-btn');
 
-            if (resetButton) {
+            // --- NUEVO: Flujo interactivo para "URLs Zombie" (se maneja primero) ---
+            if (sitemapUrlButton && !appState.isLoading) {
+                const sitemapUrl = sitemapUrlButton.dataset.sitemapUrl;
+                runZombieAnalysis({ sitemapUrl, domain: currentProject.url, projectId: currentProject.id });
+                return;
+            }
+            if (sitemapSampleButton && !appState.isLoading) {
+                const sitemapUrl = sitemapSampleButton.dataset.sitemapUrl;
+                runZombieAnalysis({ sitemapUrl, domain: currentProject.url, projectId: currentProject.id, sample: true });
+                return;
+            }
+            if (sitemapCancelButton) {
+                setState({ moduleResults: { ...appState.moduleResults, 'zombie-urls': null } });
+                return;
+            }
+            
+            // --- Lógica para el resto de botones (se mantiene intacta) ---
+            if (moduleButton && !appState.isLoading) {
+                const moduleKey = moduleButton.dataset.module;
+                let payload = {};
+                
+                if (moduleKey === 'zombie-urls') { // Clic en el botón INICIAL de la herramienta
+                    let path = document.getElementById('zombie-path-input')?.value.trim();
+                    if (!path) { path = '/sitemap.xml'; }
+                    if (!path.startsWith('/')) { return alert('La ruta debe comenzar con una barra inclinada "/".'); }
+                    const sitemapToAnalyze = `https://${currentProject.url}${path}`;
+                    setState({ moduleResults: { ...appState.moduleResults, 'zombie-urls': null } });
+                    runZombieAnalysis({ sitemapUrl: sitemapToAnalyze, domain: currentProject.url, projectId: currentProject.id });
+                    return;
+                }
+                
+                // Lógica para las otras herramientas (sin cambios)
+                if (moduleKey === 'structured-data') {
+                    let path = document.getElementById('schema-path-input')?.value.trim() || '/';
+                    if (path !== '/' && !path.startsWith('/')) { return alert('La ruta debe comenzar con una barra inclinada "/". Por ejemplo: /mi-pagina'); }
+                    payload = { url: `https://${currentProject.url}${path}`, projectId: currentProject.id };
+                } else if (moduleKey === 'linking') {
+                    const startUrl = currentProject.url.startsWith('http') ? currentProject.url : `https://${currentProject.url}`;
+                    const keyUrlsText = document.getElementById('linking-key-urls-input')?.value;
+                    if (!keyUrlsText) return alert("Añade URLs clave.");
+                    const keyUrls = keyUrlsText.split('\n').filter(url => url.trim() !== '');
+                    if (keyUrls.length === 0) return alert("Introduce al menos una URL clave.");
+                    payload = { startUrl, keyUrls, projectId: currentProject.id };
+                } else if (moduleKey === 'structure') {
+                    const keyword = document.getElementById('structure-keyword-input')?.value;
+                    const articleText = document.getElementById('structure-text-input')?.value;
+                    if (!keyword || !articleText) return alert('Introduce la palabra clave y el texto.');
+                    payload = { keyword, articleText, projectId: currentProject.id };
+                } else if (moduleKey === 'content-strategy') {
+                    const keyword = document.getElementById('content-strategy-keyword-input')?.value;
+                    if (!keyword) return alert('Por favor, introduce una palabra clave.');
+                    payload = { keyword, projectId: currentProject?.id };
+                }
+
+                // Llamada a la API para estas otras herramientas
+                setState({ isLoading: true, moduleResults: { ...appState.moduleResults, [moduleKey]: null } });
+                try {
+                    const response = await fetch(`/api/${moduleKey}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(payload) });
+                    if (!response.ok) { throw new Error((await response.json()).error); }
+                    const data = await response.json();
+                    setState({ isLoading: false, moduleResults: { ...appState.moduleResults, [moduleKey]: data } });
+                } catch (error) {
+                    alert(`Error: ${error.message}`);
+                    setState({ isLoading: false });
+                }
+
+            } else if (resetButton) {
                 resetButton.disabled = true;
                 resetButton.textContent = 'Enviando...';
-                const { error } = await supabaseClient.auth.resetPasswordForEmail(appState.session.user.email, {
-                    redirectTo: window.location.origin,
-                });
-                if (error) {
-                    alert('Error al enviar el enlace: ' + error.message);
-                } else {
-                    alert('¡Enlace enviado! Revisa tu correo electrónico.');
-                }
+                const { error } = await supabaseClient.auth.resetPasswordForEmail(appState.session.user.email, { redirectTo: window.location.origin });
+                if (error) { alert('Error al enviar el enlace: ' + error.message); } 
+                else { alert('¡Enlace enviado! Revisa tu correo electrónico.'); }
                 resetButton.disabled = false;
                 resetButton.textContent = 'Enviar Enlace';
             } else if (deleteAccountBtn) {
@@ -285,70 +372,10 @@ document.addEventListener('DOMContentLoaded', () => {
             } else if (dashboardButton) {
                 const key = dashboardButton.dataset.moduleKey;
                 setState({ dashboardDetailsOpen: { ...appState.dashboardDetailsOpen, [key]: !appState.dashboardDetailsOpen[key] } });
-            } else if (moduleButton && !appState.isLoading) {
-                const moduleKey = moduleButton.dataset.module;
-                const token = appState.session.access_token;
-                let payload = {};
-                const currentProject = appState.projects.find(p => p.id === appState.currentProjectId);
-
-                if (moduleKey === 'content-strategy' || moduleKey === 'structured-data') {
-                    if (moduleKey === 'content-strategy') {
-                        const keyword = document.getElementById('content-strategy-keyword-input')?.value;
-                        if (!keyword) return alert('Por favor, introduce una palabra clave.');
-                        payload = { keyword, projectId: currentProject?.id };
-                    } else if (moduleKey === 'structured-data') {
-                        // --- LÓGICA DE VALIDACIÓN MEJORADA ---
-                        let path = document.getElementById('schema-path-input')?.value.trim() || '/';
-
-                        if (path !== '/' && !path.startsWith('/')) {
-                            return alert('La ruta debe comenzar con una barra inclinada "/". Por ejemplo: /mi-pagina');
-                        }
-                        
-                        const fullUrl = `https://${currentProject.url}${path}`;
-                        payload = { url: fullUrl, projectId: currentProject.id };
-                    }
-                } else {
-                    if (!currentProject) return alert("Selecciona un proyecto para usar esta herramienta.");
-                    if (moduleKey === 'linking') {
-                        const startUrl = currentProject.url.startsWith('http') ? currentProject.url : `https://${currentProject.url}`;
-                        const keyUrlsText = document.getElementById('linking-key-urls-input')?.value;
-                        if (!keyUrlsText) return alert("Añade URLs clave.");
-                        const keyUrls = keyUrlsText.split('\n').filter(url => url.trim() !== '');
-                        if (keyUrls.length === 0) return alert("Introduce al menos una URL clave.");
-                        payload = { startUrl, keyUrls, projectId: currentProject.id };
-                    } else if (moduleKey === 'structure') {
-                        const keyword = document.getElementById('structure-keyword-input')?.value;
-                        const articleText = document.getElementById('structure-text-input')?.value;
-                        if (!keyword || !articleText) return alert('Introduce la palabra clave y el texto.');
-                        payload = { keyword, articleText, projectId: currentProject.id };
-                    } else if (moduleKey === 'zombie-urls') {
-                        payload = { domain: currentProject.url, projectId: currentProject.id };
-                    }
-                }
-
-                setState({ isLoading: true });
-                try {
-                    const functionUrl = `/api/${moduleKey}`;
-                    const response = await fetch(functionUrl, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                        body: JSON.stringify(payload)
-                    });
-                    if (!response.ok) {
-                        const errorData = await response.json();
-                        throw new Error(errorData.error || 'Hubo un error en el servidor.');
-                    }
-                    const data = await response.json();
-                    setState({ isLoading: false, moduleResults: { [moduleKey]: data } });
-                } catch (error) {
-                    alert(`Error: ${error.message}`);
-                    setState({ isLoading: false });
-                }
             } else if (exportLinkingBtn) {
                 const data = appState.moduleResults['linking'];
                 if (!data || !data.crawlLog || data.crawlLog.length === 0) return;
-                let csvContent = "data:text/csv;charset=utf-8,";
-                csvContent += "URL,Profundidad (clics)\n";
+                let csvContent = "data:text/csv;charset=utf-8,URL,Profundidad (clics)\n";
                 data.crawlLog.forEach(row => { csvContent += `${row.url},${row.depth}\n`; });
                 const encodedUri = encodeURI(csvContent);
                 const link = document.createElement("a");
@@ -360,29 +387,18 @@ document.addEventListener('DOMContentLoaded', () => {
             } else if (copyQuestionsBtn) {
                 const results = appState.moduleResults['structure'];
                 if (results && results.unansweredQuestions.length > 0) {
-                    const textToCopy = results.unansweredQuestions.join('\n');
-                    navigator.clipboard.writeText(textToCopy).then(() => {
+                    navigator.clipboard.writeText(results.unansweredQuestions.join('\n')).then(() => {
                         copyQuestionsBtn.innerHTML = '<ion-icon name="checkmark-outline"></ion-icon> Copiado!';
                         setTimeout(() => { copyQuestionsBtn.innerHTML = '<ion-icon name="copy-outline"></ion-icon> Copiar'; }, 2000);
-                    }).catch(err => { alert('Error al copiar el texto.'); });
+                    });
                 }
             } else if (exportStrategyBtn) {
                 const data = appState.moduleResults['content-strategy'];
                 if (!data || !data.competitors) return;
                 let textContent = `Estrategia de Contenido para la Keyword: ${document.getElementById('content-strategy-keyword-input')?.value || 'N/A'}\n\n`;
-                data.competitors.forEach(c => {
-                    textContent += `========================================\n`;
-                    textContent += `Dominio: ${c.domain}\n`;
-                    textContent += `----------------------------------------\n`;
-                    textContent += `Pilar de Contenido Principal:\n- ${c.contentPillar}\n\n`;
-                    textContent += `Subtemas Cubiertos:\n${c.subTopics.map(t => `- ${t}`).join('\n')}\n\n`;
-                    textContent += `Oportunidad de Nicho:\n- ${c.opportunity}\n`;
-                    textContent += `========================================\n\n`;
-                });
-                const blob = new Blob([textContent], { type: 'text/plain;charset=utf-8' });
-                const url = URL.createObjectURL(blob);
+                data.competitors.forEach(c => { textContent += `========================================\nDominio: ${c.domain}\n----------------------------------------\nPilar de Contenido Principal:\n- ${c.contentPillar}\n\nSubtemas Cubiertos:\n${c.subTopics.map(t => `- ${t}`).join('\n')}\n\nOportunidad de Nicho:\n- ${c.opportunity}\n========================================\n\n`; });
                 const link = document.createElement("a");
-                link.setAttribute("href", url);
+                link.setAttribute("href", 'data:text/plain;charset=utf-8,' + encodeURIComponent(textContent));
                 link.setAttribute("download", "estrategia_de_contenido.txt");
                 document.body.appendChild(link);
                 link.click();

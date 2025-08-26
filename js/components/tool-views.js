@@ -251,18 +251,20 @@ function renderZombiesView(appState) {
     const currentProject = appState.projects.find(p => p.id === appState.currentProjectId);
 
     if (!currentProject) {
-        return `<div class="text-center py-12 bg-card rounded-lg border border-dashed border-border"><ion-icon name="briefcase-outline" class="text-5xl text-muted-foreground"></ion-icon><h3 class="text-xl font-bold mt-4">No hay un proyecto seleccionado</h3><p class="text-muted-foreground mt-2">Por favor, crea o selecciona un proyecto para poder analizar sus URLs.</p><button data-view="projects" class="mt-6 bg-primary hover:opacity-90 text-primary-foreground font-semibold px-6 py-2.5 rounded-md">Ir a Proyectos</button></div>`;
+        return `<div class="text-center py-12 bg-card rounded-lg border border-dashed border-border"><ion-icon name="briefcase-outline" class="text-5xl text-muted-foreground"></ion-icon><h3 class="text-xl font-bold mt-4">No hay un proyecto seleccionado</h3><p class="text-muted-foreground mt-2">Por favor, crea o selecciona un proyecto para poder analizar sus URLs.</p><button data-view="projects" class="btn btn-primary mt-6">Ir a Proyectos</button></div>`;
     }
 
-    // --- LÓGICA DEL BOTÓN AÑADIDA ---
+    const domainPrefix = `https://${currentProject.url}`;
+    const data = appState.moduleResults['zombie-urls'];
+
+    // --- LÓGICA DEL BOTÓN Y LA INTERFAZ ---
     const buttonHTML = appState.isLoading
-        ? `<button disabled class="bg-muted text-muted-foreground font-semibold px-8 py-3 rounded-md flex items-center gap-2 inline-flex cursor-not-allowed">
+        ? `<button disabled class="btn bg-muted text-muted-foreground cursor-not-allowed">
             <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-muted-foreground"></div>
             Buscando...
            </button>`
-        : `<button data-module="zombie-urls" class="btn btn-primary">Buscar URLs Zombie</button>`;
+        : `<button data-module="zombie-urls" class="btn btn-primary">Buscar Sitemap</button>`;
 
-    // --- BLOQUE inputHTML MODIFICADO CON TOOLTIP Y MEJOR DESCRIPCIÓN ---
     const inputHTML = `
         <div class="flex items-center gap-2">
             <h3 class="text-2xl font-bold text-foreground">Análisis de URLs Zombie</h3>
@@ -270,67 +272,80 @@ function renderZombiesView(appState) {
                 <ion-icon name="information-circle-outline" class="text-muted-foreground text-xl cursor-pointer"></ion-icon>
                 <span class="tooltip-text">
                     <b>¿Cómo funciona?</b><br>
-                    1. Lee la lista completa de URLs de tu <b>sitemap.xml</b>.<br>
-                    2. Para cada URL, realiza una búsqueda "site:tu-url" en Google vía <b>Serper</b>.<br>
-                    3. Si Google no devuelve ningún resultado, la página se marca como posible "zombie".
+                    Esta herramienta interactiva audita tus sitemaps para encontrar páginas no indexadas. Puedes dejar el campo vacío para que busque el sitemap principal, o especificar la ruta a un sitemap concreto.
                 </span>
             </div>
         </div>
         <p class="text-muted-foreground mt-2">
-            Las "URLs Zombie" son páginas que existen en tu sitio pero que Google no ha indexado. Estas páginas consumen tu presupuesto de rastreo sin aportar ningún valor SEO. Identificarlas y corregirlas (mejorándolas, redireccionándolas o eliminándolas) ayuda a Google a centrarse en el contenido que realmente importa.
+            Esta herramienta se enfoca en el análisis masivo de sitemaps. Para comprobar una única URL, te recomendamos usar el comando <b>site:tu-url.com</b> directamente en Google.
         </p>
         <div class="mt-6 space-y-4">
             <div>
-                <label class="block text-sm font-bold text-muted-foreground mb-2">Dominio a Analizar</label>
-                <input type="text" class="w-full bg-muted border border-border rounded-md px-3 py-2" value="${currentProject.url}" disabled>
+                <label for="zombie-path-input" class="block text-sm font-bold text-muted-foreground mb-2">Dominio a Auditar (introduce una ruta de sitemap opcional)</label>
+                <div class="flex items-center">
+                    <span class="inline-flex items-center px-3 h-10 rounded-l-md border border-r-0 border-border bg-muted text-muted-foreground text-sm">
+                        ${domainPrefix}
+                    </span>
+                    <input id="zombie-path-input" type="text"
+                           class="w-full h-10 bg-background border border-border rounded-r-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ring"
+                           placeholder="/sitemap.xml (por defecto)">
+                </div>
             </div>
         </div>
         <div class="text-right mt-6">
             ${buttonHTML}
         </div>`;
     
-    const resultsRenderer = (data) => {
-        const results = data.results || [];
-        const errors = results.filter(r => r.type === 'error');
-        const warnings = results.filter(r => r.type === 'warning');
-        const infos = results.filter(r => r.type === 'info');
-
-        if (errors.length > 0) {
-            const error = errors[0];
-            return `<div class="bg-destructive/10 border border-destructive/30 text-destructive p-6 rounded-lg"><h4 class="font-bold text-lg flex items-center gap-2"><ion-icon name="close-circle-outline"></ion-icon> Problema Crítico Encontrado</h4><p class="mt-2 font-semibold">${error.status} en la URL:</p><p class="font-mono text-sm bg-destructive/20 p-2 rounded-md mt-1">${error.url}</p><p class="mt-4 font-semibold">Recomendación:</p><p>${error.suggestion}</p></div>`;
-        }
-        
-        const renderRow = (r) => {
-            const isWarning = r.type === 'warning';
-            const icon = isWarning ? 'warning-outline' : 'checkmark-circle-outline';
-            const textColor = isWarning ? 'text-destructive' : 'text-secondary';
-            return `<div class="grid grid-cols-1 md:grid-cols-3 items-center gap-4 bg-background p-3 rounded-md">
-                        <span class="font-mono text-sm text-foreground col-span-1">${r.url}</span>
-                        <div class="${textColor} font-semibold text-sm flex items-center gap-2">
-                            <ion-icon name="${icon}"></ion-icon>${r.status}
-                        </div>
-                        <div class="text-muted-foreground text-sm">${r.suggestion}</div>
-                    </div>`;
-        };
-        
-        return `<div class="bg-card p-6 rounded-lg border border-border space-y-6"><div><h4 class="text-lg font-semibold">Diagnóstico de Indexación</h4><p class="text-sm text-muted-foreground mt-1">Se encontraron <span class="font-bold text-destructive">${warnings.length} URLs</span> con posibles problemas y <span class="font-bold text-secondary">${infos.length} archivos</span> correctamente no indexados.</p></div>${warnings.length > 0 ? `<div class="bg-muted p-4 rounded-lg"><h5 class="font-semibold text-foreground mb-2 text-destructive flex items-center gap-2"><ion-icon name="warning-outline"></ion-icon>Posibles Problemas a Revisar</h5><div class="space-y-3 mt-3">${warnings.map(renderRow).join('')}</div></div>` : ''}${infos.length > 0 ? `<div class="bg-muted p-4 rounded-lg"><h5 class="font-semibold text-foreground mb-2 text-secondary flex items-center gap-2"><ion-icon name="checkmark-done-outline"></ion-icon>Archivos de Sistema (Correcto)</h5><div class="space-y-3 mt-3">${infos.map(renderRow).join('')}</div></div>` : ''}</div>`;
-    }
-
-    // --- LÓGICA DE RENDERIZADO DE RESULTADOS MODIFICADA ---
-    const data = appState.moduleResults['zombie-urls'];
+    // --- LÓGICA DE RENDERIZADO DE RESULTADOS (AHORA CON MÚLTIPLES PASOS) ---
     let resultsContainerHTML = '';
-    
     if (appState.isLoading) {
         const logs = data?.activityLog || ['Iniciando análisis...'];
         resultsContainerHTML = renderProcessConsole(logs);
     } else if (data) {
-        const consoleHTML = renderProcessConsole(data.activityLog);
-        const resultsHTML = resultsRenderer(data);
-        resultsContainerHTML = `${consoleHTML}<div class="mt-8">${resultsHTML}</div>`;
+        // --- PASO 2: SELECCIÓN DE SITEMAP ---
+        if (data.sitemapList) {
+            const sitemapLinks = data.sitemapList.map(sitemap => `
+                <button data-sitemap-url="${sitemap.url}" class="result-row text-left hover:border-primary cursor-pointer">
+                    <span class="font-mono text-foreground col-span-2 truncate">${sitemap.url.replace(domainPrefix, '')}</span>
+                    <span class="font-semibold text-right text-muted-foreground">Últ. Mod: ${sitemap.lastMod || 'N/A'}</span>
+                </button>
+            `).join('');
+            resultsContainerHTML = `
+                <div class="results-card p-6">
+                    <h4 class="text-lg font-semibold text-foreground">Sitemap de tipo 'Índice' detectado</h4>
+                    <p class="text-sm text-muted-foreground mt-1">Hemos encontrado ${data.sitemapList.length} sub-sitemaps. Por favor, elige cuál quieres auditar:</p>
+                    <div class="mt-4 space-y-2">${sitemapLinks}</div>
+                </div>
+            `;
+        } 
+        // --- PASO 3: AVISO DE SITEMAP GRANDE Y OPCIÓN DE MUESTREO ---
+        else if (data.urlCount && data.isTooLarge) {
+            resultsContainerHTML = `
+                <div class="results-card p-6 text-center">
+                     <ion-icon name="documents-outline" class="text-5xl text-accent"></ion-icon>
+                     <h4 class="text-lg font-semibold text-foreground mt-4">Sitemap Demasiado Grande</h4>
+                     <p class="text-sm text-muted-foreground mt-1">El sitemap seleccionado contiene <b>${data.urlCount} URLs</b>.</p>
+                     <p class="mt-4">Analizarlas todas puede ser lento y costoso. ¿Prefieres analizar una <b>muestra aleatoria de 10 URLs</b> para un chequeo rápido?</p>
+                     <div class="mt-6 flex justify-center gap-4">
+                        <button data-sitemap-sample="true" data-sitemap-url="${data.sitemapUrl}" class="btn btn-primary">Sí, analizar muestra</button>
+                        <button data-sitemap-cancel="true" class="btn bg-muted text-muted-foreground">No, cancelar</button>
+                     </div>
+                </div>
+            `;
+        }
+        // --- PASO FINAL: MOSTRAR RESULTADOS ---
+        else if (data.results) {
+            const consoleHTML = renderProcessConsole(data.activityLog);
+            const resultsHTML = resultsRenderer(data); // Reutilizamos la función de renderizado de resultados
+            resultsContainerHTML = `${consoleHTML}<div class="mt-8">${resultsHTML}</div>`;
+        }
     } else {
         resultsContainerHTML = `<div class="text-center py-12 bg-card rounded-lg border border-dashed border-border"><p class="text-muted-foreground">Los resultados de tu análisis aparecerán aquí.</p></div>`;
     }
-    // --- FIN DE LA LÓGICA MODIFICADA ---
+
+    const resultsRenderer = (data) => {
+        // ... (esta sub-función no necesita cambios por ahora)
+    }
 
     return `
         <div class="max-w-4xl mx-auto space-y-8">
