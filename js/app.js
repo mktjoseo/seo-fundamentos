@@ -18,6 +18,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZnY25rY2lob296YWdtZ3BjemxqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUwMDA0NDksImV4cCI6MjA3MDU3NjQ0OX0.p7t5AqCbl_LZ-cjw_LS2ROd_TsttWnjjopes_MZLnCU';
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+    // --- SCRIPT AÑADIDO PARA MANEJAR EL REFRESCO ---
+    // performance.navigation.type === 1 significa que la página fue recargada.
+    if (performance.navigation && performance.navigation.type === 1) {
+        supabaseClient.auth.signOut();
+    }
+    
     // --- 3. DATOS Y ESTADO DE LA APLICACIÓN ---
     const appState = {
         session: null, 
