@@ -26,7 +26,7 @@ function renderStructureView(appState) {
             <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-muted-foreground"></div>
             Analizando...
            </button>`
-        : `<button data-module="structure" class="btn-primary">
+        : `<button data-module="structure" class="btn btn-primary">
                 <ion-icon name="analytics-outline"></ion-icon>
                 Analizar Contenido
             </button>`;
@@ -143,8 +143,7 @@ function renderLinkingView(appState) {
             <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-muted-foreground"></div>
             Calculando...
            </button>`
-        : `<button data-module="linking" class="btn-primary">Calcular Profundidad</button>`;
-    
+        : `<button data-module="linking" class="btn btn-primary">Calcular Profundidad</button>`;    
 
     // --- BLOQUE inputHTML MODIFICADO CON TOOLTIP Y MEJOR DESCRIPCIÓN ---
     const inputHTML = `
@@ -261,7 +260,7 @@ function renderZombiesView(appState) {
             <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-muted-foreground"></div>
             Buscando...
            </button>`
-        : `<button data-module="zombie-urls" class="btn-primary">Buscar URLs Zombie</button>`;
+        : `<button data-module="zombie-urls" class="btn btn-primary">Buscar URLs Zombie</button>`;
 
     // --- BLOQUE inputHTML MODIFICADO CON TOOLTIP Y MEJOR DESCRIPCIÓN ---
     const inputHTML = `
@@ -353,7 +352,7 @@ function renderSchemaView(appState) {
             <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-muted-foreground"></div>
             Auditando...
            </button>`
-        : `<button data-module="structured-data" class="btn-primary">Auditar Schema</button>`;
+        : `<button data-module="structured-data" class="btn btn-primary">Auditar Schema</button>`;
 
         const inputHTML = `
         <div class="flex items-center gap-2">
@@ -444,7 +443,7 @@ function renderContentStrategyView(appState) {
             <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-muted-foreground"></div>
             Analizando...
            </button>`
-        : `<button data-module="content-strategy" class="btn-primary">Analizar Estrategia</button>`;
+        : `<button data-module="content-strategy" class="btn btn-primary">Analizar Estrategia</button>`;
 
 // --- BLOQUE inputHTML MODIFICADO CON TOOLTIP Y MEJOR DESCRIPCIÓN ---
     const inputHTML = `
