@@ -158,7 +158,19 @@ textarea {
   line-height: 1.4;
 }
 
+.btn {
+    @apply font-semibold px-6 py-2.5 rounded-md transition-opacity flex items-center justify-center gap-2 inline-flex;
+}
+
+.btn-primary {
+    @apply btn bg-primary text-primary-foreground hover:opacity-90;
+}
+
 .tooltip:hover .tooltip-text {
   visibility: visible;
   opacity: 1;
+}
+
+.result-row {
+    @apply bg-background px-4 py-3 rounded-md text-sm grid grid-cols-3 items-center gap-4;
 }
