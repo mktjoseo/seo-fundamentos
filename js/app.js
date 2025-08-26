@@ -488,23 +488,93 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
         
+    // --- LÓGICA DE EXPORTACIÓN A PDF MEJORADA ---
         exportButtonContainer.addEventListener('click', async (e) => {
             const exportButton = e.target.closest('#export-pdf-btn');
-            if (exportButton && appState.dashboardData) { // Asegurarse de que hay datos
-                const reportElement = document.getElementById('dashboard-report');
-                if (!reportElement) { return alert('No se encontró el contenido del reporte.'); }
+            if (exportButton && appState.dashboardData) {
                 exportButton.disabled = true;
                 exportButton.innerHTML = '<ion-icon name="hourglass-outline" class="animate-spin"></ion-icon> Generando...';
+                
                 try {
-                    const canvas = await html2canvas(reportElement, { scale: 2, useCORS: true, backgroundColor: getComputedStyle(document.body).getPropertyValue('--background').trim() });
-                    const imgData = canvas.toDataURL('image/png');
                     const { jsPDF } = window.jspdf;
-                    const pdf = new jsPDF({ orientation: 'p', unit: 'px', format: [canvas.width, canvas.height] });
-                    pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
+                    const pdf = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
+                    const { modules, healthScore, contentOpportunities } = appState.dashboardData;
                     const currentProject = appState.projects.find(p => p.id === appState.currentProjectId);
-                    const projectName = currentProject ? currentProject.name.replace(/\s/g, '_') : 'Reporte';
-                    const date = new Date().toISOString().split('T')[0];
-                    pdf.save(`Reporte_SEO_${projectName}_${date}.pdf`);
+                    const projectName = currentProject ? currentProject.name : 'Reporte';
+                    const date = new Date().toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' });
+                    let yPos = 60; // Posición vertical inicial
+
+                    // --- Encabezado del PDF ---
+                    pdf.setFontSize(22).setFont(undefined, 'bold');
+                    pdf.text(`Reporte de Salud SEO - ${projectName}`, 40, yPos);
+                    yPos += 25;
+                    pdf.setFontSize(12).setFont(undefined, 'normal');
+                    pdf.text(date, 40, yPos);
+                    yPos += 40;
+
+                    // --- Gráficos ---
+                    if (window.healthChartInstance && window.severityChartInstance) {
+                        const healthImg = window.healthChartInstance.toBase64Image();
+                        const severityImg = window.severityChartInstance.toBase64Image();
+                        pdf.addImage(healthImg, 'PNG', 40, yPos, 150, 150);
+                        pdf.addImage(severityImg, 'PNG', 220, yPos, 335, 150);
+                        yPos += 180;
+                    }
+
+                    // --- Desglose por Módulo ---
+                    pdf.setFontSize(16).setFont(undefined, 'bold');
+                    pdf.text('Desglose por Módulo Técnico', 40, yPos);
+                    yPos += 25;
+                    
+                    Object.values(modules).forEach(module => {
+                        pdf.setFontSize(12).setFont(undefined, 'bold');
+                        pdf.text(`${module.name}:`, 40, yPos);
+                        pdf.setFont(undefined, 'normal');
+                        pdf.text(`${module.health}% Salud`, 450, yPos, { align: 'right' });
+                        yPos += 20;
+
+                        if (module.issuesList.length > 0) {
+                            module.issuesList.forEach(issue => {
+                                pdf.setFontSize(10);
+                                const issueText = `- ${issue.text}`;
+                                // Manejo de texto largo con auto-wrap
+                                const splitText = pdf.splitTextToSize(issueText, 515); 
+                                pdf.text(splitText, 50, yPos);
+                                yPos += (splitText.length * 12);
+                            });
+                        } else {
+                            pdf.setFontSize(10).setTextColor(150);
+                            pdf.text('- ¡Todo en orden!', 50, yPos);
+                            pdf.setTextColor(0);
+                            yPos += 15;
+                        }
+                        yPos += 10;
+                    });
+                    
+                    // --- Oportunidades de Contenido ---
+                    if(contentOpportunities && contentOpportunities.length > 0) {
+                        pdf.addPage();
+                        yPos = 60;
+                        pdf.setFontSize(16).setFont(undefined, 'bold');
+                        pdf.text('Oportunidades de Contenido', 40, yPos);
+                        yPos += 25;
+
+                        contentOpportunities.forEach(opp => {
+                            pdf.setFontSize(12).setFont(undefined, 'bold');
+                            pdf.text(`Keyword: ${opp.keyword}`, 40, yPos);
+                            yPos += 20;
+                            
+                            pdf.setFontSize(10).setFont(undefined, 'normal');
+                            const opportunityText = `Sugerencia: ${opp.competitors?.[0]?.opportunity || 'N/A'}`;
+                            const splitText = pdf.splitTextToSize(opportunityText, 515);
+                            pdf.text(splitText, 50, yPos);
+                            yPos += (splitText.length * 12) + 15;
+                        });
+                    }
+                    
+                    // --- Guardar el PDF ---
+                    pdf.save(`Reporte_SEO_${projectName.replace(/\s/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`);
+
                 } catch (error) {
                     console.error("Error al generar PDF:", error);
                     alert("Hubo un error al generar el PDF.");
@@ -514,6 +584,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         });
+    // --- FIN DE LA LÓGICA DE EXPORTACIÓN ---
 
         document.addEventListener('click', e => {
             if (!projectSelectorContainer.contains(e.target) && appState.isDropdownOpen) {
