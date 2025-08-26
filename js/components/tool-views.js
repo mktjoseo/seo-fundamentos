@@ -122,7 +122,7 @@ function renderStructureView(appState) {
 
     return `
         <div class="max-w-4xl mx-auto space-y-8">
-            <div class="bg-card p-6 rounded-lg border border-border">${inputHTML}</div>
+            <div class="bg-card p-6 rounded-lg border border-border glow-card">${inputHTML}</div>
             <div id="results-container">${resultsHTML}</div>
         </div>
     `;
@@ -242,7 +242,7 @@ function renderLinkingView(appState) {
 
     return `
         <div class="max-w-4xl mx-auto space-y-8">
-            <div class="bg-card p-6 rounded-lg border border-border">${inputHTML}</div>
+            <div class="bg-card p-6 rounded-lg border border-border glow-card">${inputHTML}</div>
             <div id="results-container">${resultsHTML}</div>
         </div>`;
 }
@@ -380,7 +380,7 @@ function renderZombiesView(appState) {
 
     return `
         <div class="max-w-4xl mx-auto space-y-8">
-            <div class="bg-card p-6 rounded-lg border border-border">${inputHTML}</div>
+            <div class="bg-card p-6 rounded-lg border border-border glow-card">${inputHTML}</div>
             <div id="results-container">
                 ${resultsContainerHTML}
             </div>
@@ -476,7 +476,7 @@ function renderSchemaView(appState) {
 
     return `
         <div class="max-w-4xl mx-auto space-y-8">
-            <div class="bg-card p-6 rounded-lg border border-border">${inputHTML}</div>
+            <div class="bg-card p-6 rounded-lg border border-border glow-card">${inputHTML}</div>
             <div id="results-container">${resultsHTML}</div>
         </div>
     `;
@@ -589,7 +589,7 @@ function renderContentStrategyView(appState) {
 
     return `
         <div class="max-w-4xl mx-auto space-y-8">
-            <div class="bg-card p-6 rounded-lg border border-border">${inputHTML}</div>
+            <div class="bg-card p-6 rounded-lg border border-border glow-card">${inputHTML}</div>
             <div id="results-container">
                 ${resultsContainerHTML}
             </div>

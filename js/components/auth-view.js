@@ -10,7 +10,7 @@ export function renderAuthView() {
                 <p class="text-muted-foreground mt-2">Accede a tu cuenta para gestionar tus proyectos</p>
             </div>
 
-            <div class="bg-card border border-border rounded-lg shadow-lg p-8">
+            <div class="bg-card border border-border rounded-lg shadow-lg p-8 glow-card">
                 
                 <div id="login-form-container">
                     <form id="login-form" class="space-y-6">

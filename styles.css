@@ -196,3 +196,37 @@ textarea {
     transform: translateY(0);
     box-shadow: 0 1px 3px rgba(0,0,0,0.1); /* Vuelve a la sombra original */
 }
+
+/* --- WOW FACTOR: GLOW EFFECT --- */
+.glow-card {
+    position: relative; /* Necesario para posicionar el brillo */
+    overflow: hidden;   /* Evita que el brillo se salga de la tarjeta */
+}
+
+.glow-card::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 200%; /* Hacemos el gradiente muy grande */
+    height: 200%;
+    background-image: radial-gradient(circle, 
+        rgba(129, 140, 248, 0.2), /* Color del brillo (usamos el --primary del tema oscuro) */
+        transparent 40%
+    );
+    opacity: 0;
+    transition: opacity 0.5s ease-in-out;
+    z-index: 0; /* Lo ponemos detrás del contenido */
+}
+
+/* El brillo aparece cuando pasamos el cursor sobre la tarjeta */
+.glow-card:hover::before {
+    opacity: 1;
+}
+
+/* Aseguramos que el contenido de la tarjeta esté por encima del brillo */
+.glow-card > * {
+    position: relative;
+    z-index: 1;
+}
