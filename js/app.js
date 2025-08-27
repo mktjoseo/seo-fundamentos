@@ -232,6 +232,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 const newProjectId = parseInt(button.dataset.projectId);
                 if (newProjectId !== appState.currentProjectId) {
                     setState({ currentProjectId: newProjectId, isDropdownOpen: false, currentView: 'dashboard' }, false);
+                    
+                    // --- LÓGICA AÑADIDA PARA GUARDAR LA SELECCIÓN ---
+                    // Guardamos en segundo plano el ID del nuevo proyecto en el perfil del usuario.
+                    supabaseClient
+                        .from('profiles')
+                        .update({ last_active_project_id: newProjectId })
+                        .eq('id', appState.session.user.id)
+                        .then(({ error }) => {
+                            if (error) console.error('Error al guardar el último proyecto:', error);
+                        });
+                                        
                     loadDashboardData();
                 } else {
                     setState({ isDropdownOpen: false });
@@ -747,9 +758,24 @@ document.addEventListener('DOMContentLoaded', () => {
         // Actualizamos el estado de la aplicación con los datos cargados
         appState.projects = projectsFromDB || [];
         appState.userProfile = userProfile;
-        if (projectsFromDB.length > 0 && !appState.currentProjectId) {
-            appState.currentProjectId = projectsFromDB[0].id;
+        
+        // --- LÓGICA DE CARGA DE PROYECTO MEJORADA ---
+        if (projectsFromDB.length > 0) {
+            // 1. Verificamos si el usuario tiene un proyecto guardado en su perfil.
+            const lastProjectId = userProfile?.last_active_project_id;
+            
+            // 2. Verificamos si ese proyecto aún existe en la lista de proyectos.
+            const lastProjectExists = projectsFromDB.some(p => p.id === lastProjectId);
+
+            if (lastProjectId && lastProjectExists) {
+                // Si existe, lo cargamos.
+                appState.currentProjectId = lastProjectId;
+            } else {
+                // Si no, cargamos el primer proyecto de la lista (el más antiguo).
+                appState.currentProjectId = projectsFromDB[0].id;
+            }
         }
+        // --- FIN DE LA LÓGICA MEJORADA ---
         
         buildSidebarNav(sidebarNav, views);
     }
