@@ -783,21 +783,31 @@ document.addEventListener('DOMContentLoaded', () => {
     function init() {
         const appLoader = document.getElementById('app-loader');
 
-        // --- LÓGICA DE INICIALIZACIÓN ---
+        // --- LÓGICA DE INICIALIZACIÓN DEFINITIVA Y A PRUEBA DE RECARGAS ---
         supabaseClient.auth.onAuthStateChange(async (event, session) => {
+            // Primero, comprobamos si la página se está recargando.
+            const isReload = performance.navigation && performance.navigation.type === 1;
+
+            if (isReload && session) {
+                // Si es una recarga Y hay una sesión, la cerramos para empezar de cero.
+                await supabaseClient.auth.signOut();
+                // NOTA: Al llamar a signOut, onAuthStateChange se volverá a disparar, pero
+                // esta vez la 'session' será nula, por lo que entrará en el bloque 'else'.
+                return; // Detenemos la ejecución actual.
+            }
+
             appState.session = session;
 
             if (session) {
-                // Si hay sesión, primero cargamos todos los datos del usuario
+                // Si hay sesión (y no es una recarga), cargamos la app.
                 await initAppForUser();
-                // Luego, si estamos en el dashboard, cargamos sus datos específicos
                 if (appState.currentView === 'dashboard') {
-                    await loadDashboardData(); // Esperamos a que termine
+                    await loadDashboardData();
                 } else {
-                    render(); // Para otras vistas, solo renderizamos
+                    render();
                 }
             } else {
-                // Si no hay sesión, limpiamos y renderizamos el login
+                // Si no hay sesión, limpiamos el estado y mostramos el login.
                 appState.userProfile = null;
                 appState.projects = [];
                 appState.currentProjectId = null;
