@@ -6,7 +6,7 @@ export function renderAuthView() {
         <div class="max-w-md w-full mx-auto">
             
             <div class="text-center mb-8">
-                <img src="/assets/seo-fundamentos-logo.svg" alt="Fundamentos SEO Logo" class="h-30 w-auto mx-auto">
+                <img src="/assets/seo-fundamentos-logo-01.svg" alt="Fundamentos SEO Logo" class="h-25 w-auto mx-auto">
                 <p class="text-muted-foreground mt-2">Accede a tu cuenta para gestionar tus proyectos</p>
             </div>
 
