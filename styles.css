@@ -225,9 +225,3 @@ textarea {
 .glow-card:hover::before {
     opacity: 1;
 }
-
-/* Aseguramos que el contenido de la tarjeta esté por encima del brillo */
-.glow-card > * {
-    position: relative;
-    z-index: 1;
-}
