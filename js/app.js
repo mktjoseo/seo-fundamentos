@@ -783,29 +783,37 @@ document.addEventListener('DOMContentLoaded', () => {
 function init() {
     const appLoader = document.getElementById('app-loader');
 
-    // --- LÓGICA DE INICIALIZACIÓN SIMPLIFICADA ---
+    // --- LÓGICA DE INICIALIZACIÓN A PRUEBA DE ERRORES ---
     supabaseClient.auth.onAuthStateChange(async (event, session) => {
-        appState.session = session;
+        try {
+            appState.session = session;
 
-        if (session) {
-            // Si hay sesión, cargamos la app.
-            await initAppForUser();
-            if (appState.currentView === 'dashboard') {
-                await loadDashboardData();
+            if (session) {
+                // Si hay sesión, intentamos cargar la app.
+                await initAppForUser();
+                if (appState.currentView === 'dashboard') {
+                    await loadDashboardData();
+                } else {
+                    render();
+                }
             } else {
+                // Si no hay sesión, limpiamos el estado y mostramos el login.
+                appState.userProfile = null;
+                appState.projects = [];
+                appState.currentProjectId = null;
                 render();
             }
-        } else {
-            // Si no hay sesión, limpiamos el estado y mostramos el login.
-            appState.userProfile = null;
-            appState.projects = [];
-            appState.currentProjectId = null;
-            render();
-        }
-
-        // Al final de todo, quitamos el loader principal
-        if (appLoader) {
-            appLoader.classList.add('hidden');
+        } catch (error) {
+            // Si algo falla (ej. Supabase no responde), lo mostramos en consola
+            console.error("Error crítico durante la inicialización:", error);
+            // La app no cargará, pero al menos el loader se ocultará
+            // y el usuario podría ver la página de login (si la sesión falla)
+        } finally {
+            // Este bloque SIEMPRE se ejecutará, haya o no haya error
+            // Al final de todo, quitamos el loader principal
+            if (appLoader) {
+                appLoader.classList.add('hidden');
+            }
         }
     });
 
