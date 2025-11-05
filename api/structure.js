@@ -47,7 +47,7 @@ export default async function handler(request, response) {
 
     // Paso 2: Analizar con IA
     activityLog.push("Paso 2/2: Analizando el texto con IA (vía Gemini)...");
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${gemini_api_key}`;
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${gemini_api_key}`;
     const prompt = `Analiza si el siguiente texto de un artículo cubre de forma relevante los temas principales extraídos de los primeros resultados de búsqueda de Google. Contexto de Búsqueda de Google: --- ${searchContext} --- Texto del Artículo a Analizar: --- ${articleText} --- Basado en el análisis, devuelve ÚNICAMENTE un objeto JSON válido con el siguiente formato y nada más: { "coverage": <un número de 0 a 100>, "unansweredQuestions": [ "<pregunta 1>", "<pregunta 2>", "<pregunta 3>" ] }`;
 
     const geminiResponse = await fetch(geminiUrl, {

@@ -67,7 +67,7 @@ export default async function handler(request, response) {
     activityLog.push("Paso 3/3: Buscando schemas de la competencia (vía Serper)...");
     
     const validateSchemaPromise = async () => {
-      const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${gemini_api_key}`;
+      const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${gemini_api_key}`;
       const prompt = `Valida este JSON-LD. Responde ÚNICAMENTE con un objeto JSON con el formato: {"status": "<Válido|Válido con advertencias|Error>", "issues": [{"type": "<Advertencia|Error>", "message": "<descripción del problema>"}]}. Schema a analizar: ${schemaContent}`;
       const geminiResponse = await fetch(geminiUrl, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },

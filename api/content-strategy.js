@@ -89,7 +89,7 @@ export default async function handler(request, response) {
     // Paso 3: Análisis con Gemini
     activityLog.push("Paso 3/3: Analizando todo el contexto con IA para generar la estrategia (vía Gemini)...");
     const contextForGemini = competitorsTextData.map(c => `Competidor: ${c.domain}\nContenido Relevante:\n${c.content}`).join('\n---\n');
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${gemini_api_key}`;
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${gemini_api_key}`;
     const prompt = `Actúa como un estratega de contenido SEO experto. Basado en el siguiente contenido extraído de los principales competidores para la palabra clave "${keyword}", realiza un análisis para cada uno. Contenido de la Competencia: --- ${contextForGemini} --- Devuelve ÚNICAMENTE un objeto JSON válido con una clave "competitors" que contenga un array. Cada objeto en el array debe tener este formato y nada más: { "domain": "<nombre del dominio competidor>", "contentPillar": "<El pilar de contenido principal que identificas>", "subTopics": ["<lista de 3 a 5 subtemas que cubren>"], "opportunity": "<Una sugerencia concreta de un nicho o ángulo de contenido que no están explotando>" }`;
     const geminiResponse = await fetch(geminiUrl, {
       method: 'POST',
